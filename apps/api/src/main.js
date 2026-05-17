@@ -69,7 +69,7 @@ function startBundledPocketBase() {
 		return null;
 	}
 
-	const pocketBaseDir = path.resolve(__dirname, '../../../pocketbase');
+	const pocketBaseDir = path.resolve(__dirname, '../../pocketbase');
 	const binaryName = process.platform === 'win32' ? 'pocketbase.exe' : 'pocketbase';
 	const pocketBaseBinary = path.join(pocketBaseDir, binaryName);
 

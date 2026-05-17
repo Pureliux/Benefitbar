@@ -233,16 +233,20 @@ export const AuthProvider = ({ children }) => {
       if (!res.ok) {
         return { configured: false };
       }
+      const contentType = res.headers.get('Content-Type') || '';
+      if (!contentType.includes('application/json')) {
+        return { configured: false, error: 'Verbindung zum Server konnte nicht hergestellt werden.' };
+      }
       return await res.json();
     } catch {
-      return { configured: false };
+      return { configured: false, error: 'Verbindung zum Server konnte nicht hergestellt werden.' };
     }
   };
 
   const loginWithMicrosoft = async () => {
     const result = await isMicrosoftConfigured();
     if (!result.configured) {
-      return { success: false, error: MICROSOFT_NOT_CONFIGURED_MESSAGE };
+      return { success: false, error: result.error || MICROSOFT_NOT_CONFIGURED_MESSAGE };
     }
 
     window.location.href = `${API_SERVER_URL}/auth/microsoft`;

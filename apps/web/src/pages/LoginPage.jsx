@@ -1,32 +1,91 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link, useNavigate } from 'react-router-dom';
+import { CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Header from '@/components/Header.jsx';
 import ErrorAlert from '@/components/ErrorAlert.jsx';
-import {
-  Armchair,
-  CheckCircle2,
-  Dumbbell,
-  GraduationCap,
-  HeartPulse,
-  Salad,
-  TrainFront,
-} from 'lucide-react';
 
 const accessSuccessMessage = 'Falls für diese E-Mail-Adresse ein aktiver Zugang besteht, wurde eine E-Mail mit weiteren Schritten versendet.';
 
 const benefitCards = [
-  { icon: HeartPulse, label: 'Gesundheit', className: 'left-8 top-20 -rotate-6 hidden xl:flex' },
-  { icon: TrainFront, label: 'Mobilität', className: 'left-24 bottom-24 rotate-3 hidden lg:flex' },
-  { icon: Dumbbell, label: 'Fitness', className: 'left-2 bottom-56 -rotate-3 hidden 2xl:flex' },
-  { icon: GraduationCap, label: 'Weiterbildung', className: 'right-8 top-24 rotate-6 hidden xl:flex' },
-  { icon: Armchair, label: 'Ergonomie', className: 'right-24 bottom-28 -rotate-4 hidden lg:flex' },
-  { icon: Salad, label: 'Ernährung', className: 'right-2 bottom-60 rotate-3 hidden 2xl:flex' },
+  {
+    label: 'Gesundheit',
+    image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=900&q=80',
+    className: 'left-[6%] top-[9%] -rotate-3 hidden xl:block',
+    objectPosition: 'center',
+  },
+  {
+    label: 'Mobilität',
+    image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=900&q=80',
+    className: 'left-[18%] top-[36%] rotate-2 hidden xl:block',
+    objectPosition: 'center',
+  },
+  {
+    label: 'Fitness',
+    image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=900&q=80',
+    className: 'left-[7%] bottom-[8%] -rotate-2 hidden xl:block',
+    objectPosition: 'center',
+  },
+  {
+    label: 'Weiterbildung',
+    image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=80',
+    className: 'right-[7%] top-[10%] rotate-3 hidden xl:block',
+    objectPosition: 'center',
+  },
+  {
+    label: 'Ergonomie',
+    image: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80',
+    className: 'right-[19%] top-[39%] -rotate-2 hidden xl:block',
+    objectPosition: 'center',
+  },
+  {
+    label: 'Ernährung',
+    image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=900&q=80',
+    className: 'right-[7%] bottom-[9%] rotate-2 hidden xl:block',
+    objectPosition: 'center',
+  },
+  {
+    label: 'Gesundheitscheck',
+    image: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=900&q=80',
+    className: 'right-[24%] bottom-[29%] rotate-1 hidden 2xl:block',
+    objectPosition: 'center',
+  },
 ];
+
+const tabletCards = [
+  benefitCards[0],
+  benefitCards[3],
+];
+
+function BenefitImageCard({ card, compact = false }) {
+  return (
+    <div
+      className={
+        compact
+          ? 'relative h-28 w-48 overflow-hidden rounded-lg border-[6px] border-white bg-white shadow-xl ring-1 ring-black/5 dark:border-[#2A2925] dark:bg-[#2A2925] dark:ring-white/10'
+          : `absolute h-44 w-72 overflow-hidden rounded-lg border-[8px] border-white bg-white shadow-2xl ring-1 ring-black/5 dark:border-[#2A2925] dark:bg-[#2A2925] dark:ring-white/10 2xl:h-52 2xl:w-80 ${card.className}`
+      }
+      aria-hidden="true"
+    >
+      <div className="relative h-full w-full overflow-hidden rounded-[2px]">
+        <img
+          src={card.image}
+          alt=""
+          loading="eager"
+          className="h-full w-full object-cover"
+          style={{ objectPosition: card.objectPosition }}
+        />
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent p-4 pt-14">
+          <span className="text-sm font-semibold text-white drop-shadow-sm">{card.label}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const LoginPage = () => {
   const { login, requestAccess, loginWithMicrosoft, microsoftMessages } = useAuth();
@@ -136,26 +195,23 @@ const LoginPage = () => {
 
       <Header />
 
-      <main className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-[#F4F1EA] px-4 py-10 text-[#222222]">
-        {benefitCards.map(({ icon: Icon, label, className }) => (
-          <div
-            key={label}
-            className={`absolute h-40 w-32 items-center justify-center rounded-lg border-[10px] border-white bg-[#EDD38E] shadow-xl ${className}`}
-            aria-hidden="true"
-          >
-            <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-white/45">
-              <Icon className="h-10 w-10 text-[#719C6F]" />
-              <span className="text-sm font-semibold text-[#222222]">{label}</span>
-            </div>
-          </div>
+      <main className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-[#F4F1EA] px-4 py-8 text-[#222222] transition-colors duration-300 dark:bg-[#11100E] dark:text-[#F7F2E8] sm:py-10">
+        <div className="pointer-events-none absolute inset-x-0 top-7 hidden justify-between px-8 lg:flex xl:hidden">
+          {tabletCards.map((card) => (
+            <BenefitImageCard key={`tablet-${card.label}`} card={card} compact />
+          ))}
+        </div>
+
+        {benefitCards.map((card) => (
+          <BenefitImageCard key={card.label} card={card} />
         ))}
 
-        <div className="relative z-10 mx-auto flex min-h-[calc(100vh-9rem)] max-w-md items-center justify-center">
-          <section className="w-full rounded-lg border border-[#E7DDBF] bg-white p-6 shadow-xl sm:p-8">
+        <div className="relative z-10 mx-auto flex min-h-[calc(100vh-8rem)] max-w-md items-center justify-center lg:min-h-[calc(100vh-9rem)]">
+          <section className="w-full rounded-lg border border-[#E7DDBF] bg-white/95 p-6 shadow-2xl shadow-black/10 backdrop-blur-sm transition-colors duration-300 dark:border-[#3A3425] dark:bg-[#1F1D1A]/95 dark:shadow-black/40 sm:p-8">
             <div className="mb-7 text-center">
-              <p className="mb-2 text-sm font-semibold uppercase text-[#C0A468]">Tchibo Österreich</p>
-              <h1 className="text-3xl font-bold text-[#222222]">Benefit-Bar</h1>
-              <p className="mx-auto mt-2 text-sm text-[#666666]">
+              <p className="mb-2 text-sm font-semibold uppercase text-[#A8873E] dark:text-[#D4B978]">Tchibo Österreich</p>
+              <h1 className="text-3xl font-bold text-[#222222] dark:text-[#F7F2E8]">Benefit-Bar</h1>
+              <p className="mx-auto mt-2 text-sm text-[#5E5A52] dark:text-[#C8C0B1]">
                 Willkommen zurück. Bitte melde dich mit deiner Eduscho E-Mail-Adresse an.
               </p>
             </div>
@@ -163,22 +219,26 @@ const LoginPage = () => {
             <ErrorAlert message={errorMsg} onDismiss={() => setErrorMsg(null)} />
 
             {successMsg && (
-              <div className="mb-6 flex items-start gap-3 rounded-lg border border-[#719C6F]/30 bg-[#719C6F]/10 p-4 text-[#315B30] shadow-sm">
+              <div className="mb-6 flex items-start gap-3 rounded-lg border border-[#719C6F]/30 bg-[#719C6F]/10 p-4 text-[#315B30] shadow-sm dark:text-[#A9D0A6]">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
                 <div className="flex-1 text-sm font-medium leading-relaxed">{successMsg}</div>
               </div>
             )}
 
             <Tabs defaultValue="login" className="w-full" onValueChange={clearMessages}>
-              <TabsList className="mb-6 grid w-full grid-cols-2 rounded-lg bg-[#F4F1EA] p-1">
-                <TabsTrigger value="login" className="rounded-md">Einloggen</TabsTrigger>
-                <TabsTrigger value="signup" className="rounded-md">Zugang anfordern</TabsTrigger>
+              <TabsList className="mb-6 grid w-full grid-cols-2 rounded-lg bg-[#F4F1EA] p-1 dark:bg-[#2A2721]">
+                <TabsTrigger value="login" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[#222222] dark:text-[#F7F2E8] dark:data-[state=active]:bg-[#3A3425] dark:data-[state=active]:text-white">
+                  Einloggen
+                </TabsTrigger>
+                <TabsTrigger value="signup" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[#222222] dark:text-[#F7F2E8] dark:data-[state=active]:bg-[#3A3425] dark:data-[state=active]:text-white">
+                  Zugang anfordern
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-5">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-[#222222]">E-Mail Adresse</label>
+                    <label className="mb-1 block text-sm font-medium text-[#222222] dark:text-[#F7F2E8]">E-Mail-Adresse</label>
                     <Input
                       type="email"
                       value={loginEmail}
@@ -187,14 +247,14 @@ const LoginPage = () => {
                         if (errorMsg) setErrorMsg(null);
                       }}
                       placeholder="vorname.nachname@eduscho.at"
-                      className="border-[#D7C99F] bg-white text-[#222222] focus:border-[#C0A468]"
+                      className="border-[#D7C99F] bg-white text-[#222222] placeholder:text-[#8B8578] focus:border-[#C0A468] dark:border-[#514733] dark:bg-[#151412] dark:text-[#F7F2E8] dark:placeholder:text-[#8A8376]"
                     />
                   </div>
 
                   <div>
                     <div className="mb-1 flex items-center justify-between">
-                      <label className="block text-sm font-medium text-[#222222]">Passwort</label>
-                      <Link to="/forgot-password" className="text-xs font-medium text-[#8B7138] hover:underline">
+                      <label className="block text-sm font-medium text-[#222222] dark:text-[#F7F2E8]">Passwort</label>
+                      <Link to="/forgot-password" className="text-xs font-medium text-[#8B7138] hover:underline dark:text-[#D4B978]">
                         Passwort vergessen?
                       </Link>
                     </div>
@@ -206,26 +266,26 @@ const LoginPage = () => {
                         if (errorMsg) setErrorMsg(null);
                       }}
                       placeholder="Passwort"
-                      className="border-[#D7C99F] bg-white text-[#222222] focus:border-[#C0A468]"
+                      className="border-[#D7C99F] bg-white text-[#222222] placeholder:text-[#8B8578] focus:border-[#C0A468] dark:border-[#514733] dark:bg-[#151412] dark:text-[#F7F2E8] dark:placeholder:text-[#8A8376]"
                     />
                   </div>
 
                   <Button
                     type="submit"
                     disabled={Boolean(loadingAction)}
-                    className="w-full bg-[#C0A468] text-white hover:bg-[#A98D52]"
+                    className="w-full bg-[#C0A468] text-white shadow-md shadow-[#C0A468]/20 hover:bg-[#A98D52] dark:bg-[#B99A56] dark:text-white dark:hover:bg-[#C0A468]"
                   >
-                    {loadingAction === 'login' ? 'Anmeldung läuft …' : 'Einloggen'}
+                    {loadingAction === 'login' ? 'Anmeldung läuft ...' : 'Einloggen'}
                   </Button>
                 </form>
 
                 <div className="mt-7">
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-[#E7DDBF]" />
+                      <span className="w-full border-t border-[#E7DDBF] dark:border-[#3A3425]" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-3 font-medium text-[#777777]">Oder</span>
+                      <span className="bg-white px-3 font-medium text-[#777777] dark:bg-[#1F1D1A] dark:text-[#AFA694]">Oder</span>
                     </div>
                   </div>
 
@@ -233,9 +293,9 @@ const LoginPage = () => {
                     onClick={handleMicrosoftLogin}
                     disabled={Boolean(loadingAction)}
                     variant="outline"
-                    className="mt-5 w-full border-[#D7C99F] bg-white text-[#222222] hover:bg-[#F4F1EA]"
+                    className="mt-5 w-full border-[#D7C99F] bg-white text-[#222222] hover:bg-[#F4F1EA] dark:border-[#514733] dark:bg-[#151412] dark:text-[#F7F2E8] dark:hover:bg-[#2A2721]"
                   >
-                    {loadingAction === 'microsoft' ? 'Wird geprüft …' : 'Mit Microsoft anmelden'}
+                    {loadingAction === 'microsoft' ? 'Wird geprüft ...' : 'Mit Microsoft anmelden'}
                   </Button>
                 </div>
               </TabsContent>
@@ -243,7 +303,7 @@ const LoginPage = () => {
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-5">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-[#222222]">E-Mail Adresse</label>
+                    <label className="mb-1 block text-sm font-medium text-[#222222] dark:text-[#F7F2E8]">E-Mail-Adresse</label>
                     <Input
                       type="email"
                       value={signupEmail}
@@ -253,15 +313,15 @@ const LoginPage = () => {
                         if (successMsg) setSuccessMsg(null);
                       }}
                       placeholder="vorname.nachname@eduscho.at"
-                      className="border-[#D7C99F] bg-white text-[#222222] focus:border-[#C0A468]"
+                      className="border-[#D7C99F] bg-white text-[#222222] placeholder:text-[#8B8578] focus:border-[#C0A468] dark:border-[#514733] dark:bg-[#151412] dark:text-[#F7F2E8] dark:placeholder:text-[#8A8376]"
                     />
                   </div>
                   <Button
                     type="submit"
                     disabled={Boolean(loadingAction)}
-                    className="w-full bg-[#C0A468] text-white hover:bg-[#A98D52]"
+                    className="w-full bg-[#C0A468] text-white shadow-md shadow-[#C0A468]/20 hover:bg-[#A98D52] dark:bg-[#B99A56] dark:text-white dark:hover:bg-[#C0A468]"
                   >
-                    {loadingAction === 'signup' ? 'Zugang wird geprüft …' : 'Zugang anfordern'}
+                    {loadingAction === 'signup' ? 'Zugang wird geprüft ...' : 'Zugang anfordern'}
                   </Button>
                 </form>
               </TabsContent>
