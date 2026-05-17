@@ -1,0 +1,13 @@
+﻿node_modules/
+dist/
+.env
+.env.*
+!.env.example
+apps/api/.env
+apps/web/.env
+apps/pocketbase/pb_data/*.db
+apps/pocketbase/pb_data/*.db-*
+apps/pocketbase/pb_data/*.wal
+apps/pocketbase/pb_data/*.shm
+.DS_Store
+Thumbs.db
