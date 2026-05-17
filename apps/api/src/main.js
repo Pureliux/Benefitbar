@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
@@ -10,12 +11,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 
-import routes from './routes/index.js';
-import { errorMiddleware } from './middleware/error.js';
-import { globalRateLimit } from './middleware/global-rate-limit.js';
 import logger from './utils/logger.js';
-import { attachAuth } from './utils/tokenUtils.js';
-import { BodyLimit } from './constants/common.js';
 
 const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -46,6 +42,67 @@ const hopByHopHeaders = new Set([
 	'transfer-encoding',
 	'upgrade',
 ]);
+
+function isLocalPocketBaseUrl(value) {
+	try {
+		const url = new URL(value);
+		return ['localhost', '127.0.0.1', '::1'].includes(url.hostname);
+	} catch {
+		return false;
+	}
+}
+
+function shouldStartPocketBase() {
+	const setting = String(process.env.START_POCKETBASE || '').toLowerCase();
+	if (['false', '0', 'no'].includes(setting)) {
+		return false;
+	}
+	if (['true', '1', 'yes'].includes(setting)) {
+		return true;
+	}
+
+	return process.env.NODE_ENV === 'production';
+}
+
+function startBundledPocketBase() {
+	if (!shouldStartPocketBase() || !isLocalPocketBaseUrl(pocketBaseProxyTarget)) {
+		return null;
+	}
+
+	const pocketBaseDir = path.resolve(__dirname, '../../../pocketbase');
+	const binaryName = process.platform === 'win32' ? 'pocketbase.exe' : 'pocketbase';
+	const pocketBaseBinary = path.join(pocketBaseDir, binaryName);
+
+	if (!fs.existsSync(pocketBaseBinary)) {
+		logger.warn(`PocketBase binary not found at ${pocketBaseBinary}`);
+		return null;
+	}
+
+	const child = spawn(pocketBaseBinary, [
+		'serve',
+		'--http=0.0.0.0:8090',
+		'--encryptionEnv=PB_ENCRYPTION_KEY',
+		'--dir=./pb_data',
+		'--migrationsDir=./pb_migrations',
+		'--hooksDir=./pb_hooks',
+		'--hooksWatch=false',
+	], {
+		cwd: pocketBaseDir,
+		env: process.env,
+		stdio: 'inherit',
+	});
+
+	child.on('error', (error) => {
+		logger.error('Failed to start bundled PocketBase:', error);
+	});
+
+	child.on('exit', (code, signal) => {
+		logger.warn(`Bundled PocketBase exited with code ${code ?? 'none'} and signal ${signal ?? 'none'}`);
+	});
+
+	logger.info('Bundled PocketBase start requested');
+	return child;
+}
 
 function buildCorsOrigin() {
 	const configuredOrigins = (process.env.CORS_ORIGIN || '')
@@ -135,6 +192,21 @@ function shouldServeSpa(req) {
 	return !apiPrefixes.some((prefix) => req.path === prefix || req.path.startsWith(`${prefix}/`));
 }
 
+const pocketBaseProcess = startBundledPocketBase();
+const [
+	{ default: routes },
+	{ errorMiddleware },
+	{ globalRateLimit },
+	{ attachAuth },
+	{ BodyLimit },
+] = await Promise.all([
+	import('./routes/index.js'),
+	import('./middleware/error.js'),
+	import('./middleware/global-rate-limit.js'),
+	import('./utils/tokenUtils.js'),
+	import('./constants/common.js'),
+]);
+
 app.set('trust proxy', true);
 
 process.on('uncaughtException', (error) => {
@@ -147,11 +219,17 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('SIGINT', async () => {
 	logger.info('Interrupted');
+	if (pocketBaseProcess && !pocketBaseProcess.killed) {
+		pocketBaseProcess.kill('SIGTERM');
+	}
 	process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
 	logger.info('SIGTERM signal received');
+	if (pocketBaseProcess && !pocketBaseProcess.killed) {
+		pocketBaseProcess.kill('SIGTERM');
+	}
 
 	await new Promise(resolve => setTimeout(resolve, 3000));
 

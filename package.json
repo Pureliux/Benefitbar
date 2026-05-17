@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "concurrently --kill-others --raw \"npm run dev --prefix apps/web\" \"npm run dev --prefix apps/api\" \"npm run dev --prefix apps/pocketbase\"",
     "build": "npm run build --prefix apps/web",
-    "start": "npm run start --prefix apps/pocketbase & npm run start --prefix apps/api",
+    "start": "START_POCKETBASE=true npm run start --prefix apps/api",
     "start:api": "npm run start --prefix apps/api",
     "start:pocketbase": "npm run start --prefix apps/pocketbase",
     "lint": "concurrently --raw \"npm run lint --prefix apps/web\" \"npm run lint --prefix apps/api\""
