@@ -15,43 +15,37 @@ const benefitCards = [
   {
     label: 'Gesundheit',
     image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=900&q=80',
-    className: 'left-[6%] top-[9%] -rotate-3 hidden xl:block',
+    className: 'left-[5.5%] top-[8%] -rotate-3 hidden xl:block',
     objectPosition: 'center',
   },
   {
     label: 'Mobilität',
     image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=900&q=80',
-    className: 'left-[18%] top-[36%] rotate-2 hidden xl:block',
+    className: 'left-[17.5%] top-[35%] rotate-2 hidden xl:block',
     objectPosition: 'center',
   },
   {
     label: 'Fitness',
     image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=900&q=80',
-    className: 'left-[7%] bottom-[8%] -rotate-2 hidden xl:block',
+    className: 'left-[6%] bottom-[7%] -rotate-2 hidden xl:block',
     objectPosition: 'center',
   },
   {
     label: 'Weiterbildung',
     image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=80',
-    className: 'right-[7%] top-[10%] rotate-3 hidden xl:block',
+    className: 'right-[5.5%] top-[8%] rotate-3 hidden xl:block',
     objectPosition: 'center',
   },
   {
     label: 'Ergonomie',
     image: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80',
-    className: 'right-[19%] top-[39%] -rotate-2 hidden xl:block',
+    className: 'right-[17.5%] top-[35%] -rotate-2 hidden xl:block',
     objectPosition: 'center',
   },
   {
     label: 'Ernährung',
     image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=900&q=80',
-    className: 'right-[7%] bottom-[9%] rotate-2 hidden xl:block',
-    objectPosition: 'center',
-  },
-  {
-    label: 'Gesundheitscheck',
-    image: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=900&q=80',
-    className: 'right-[24%] bottom-[29%] rotate-1 hidden 2xl:block',
+    className: 'right-[6%] bottom-[7%] rotate-2 hidden xl:block',
     objectPosition: 'center',
   },
 ];
@@ -67,7 +61,7 @@ function BenefitImageCard({ card, compact = false }) {
       className={
         compact
           ? 'relative h-28 w-48 overflow-hidden rounded-lg border-[6px] border-white bg-white shadow-xl ring-1 ring-black/5 dark:border-[#2A2925] dark:bg-[#2A2925] dark:ring-white/10'
-          : `absolute h-44 w-72 overflow-hidden rounded-lg border-[8px] border-white bg-white shadow-2xl ring-1 ring-black/5 dark:border-[#2A2925] dark:bg-[#2A2925] dark:ring-white/10 2xl:h-52 2xl:w-80 ${card.className}`
+          : `absolute h-[13.5rem] w-[23rem] overflow-hidden rounded-lg border-[8px] border-white bg-white shadow-2xl ring-1 ring-black/5 dark:border-[#2A2925] dark:bg-[#2A2925] dark:ring-white/10 2xl:h-56 2xl:w-96 ${card.className}`
       }
       aria-hidden="true"
     >
@@ -209,10 +203,9 @@ const LoginPage = () => {
         <div className="relative z-10 mx-auto flex min-h-[calc(100vh-8rem)] max-w-md items-center justify-center lg:min-h-[calc(100vh-9rem)]">
           <section className="w-full rounded-lg border border-[#E7DDBF] bg-white/95 p-6 shadow-2xl shadow-black/10 backdrop-blur-sm transition-colors duration-300 dark:border-[#3A3425] dark:bg-[#1F1D1A]/95 dark:shadow-black/40 sm:p-8">
             <div className="mb-7 text-center">
-              <p className="mb-2 text-sm font-semibold uppercase text-[#A8873E] dark:text-[#D4B978]">Tchibo Österreich</p>
               <h1 className="text-3xl font-bold text-[#222222] dark:text-[#F7F2E8]">Benefit-Bar</h1>
               <p className="mx-auto mt-2 text-sm text-[#5E5A52] dark:text-[#C8C0B1]">
-                Willkommen zurück. Bitte melde dich mit deiner Eduscho E-Mail-Adresse an.
+                Bitte melde dich mit deiner E-Mail-Adresse an.
               </p>
             </div>
 
