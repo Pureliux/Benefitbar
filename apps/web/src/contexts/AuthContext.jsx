@@ -4,6 +4,7 @@ import pb from '@/lib/pocketbaseClient';
 import apiServerClient from '@/lib/apiServerClient';
 
 const AuthContext = createContext(null);
+const API_SERVER_URL = (import.meta.env.VITE_API_SERVER_URL || '/hcgi/api').replace(/\/$/, '');
 const MICROSOFT_NOT_CONFIGURED_MESSAGE = 'Microsoft-Anmeldung ist aktuell nicht konfiguriert. Bitte verwende E-Mail und Passwort.';
 const MICROSOFT_FAILED_MESSAGE = 'Microsoft-Anmeldung konnte nicht abgeschlossen werden. Bitte verwende E-Mail und Passwort.';
 
@@ -244,7 +245,7 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: MICROSOFT_NOT_CONFIGURED_MESSAGE };
     }
 
-    window.location.href = '/hcgi/api/auth/microsoft';
+    window.location.href = `${API_SERVER_URL}/auth/microsoft`;
     return { success: true };
   };
 

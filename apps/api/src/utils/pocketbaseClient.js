@@ -3,9 +3,10 @@ dotenv.config();
 import Pocketbase from 'pocketbase';
 import logger from './logger.js';
 
-const POCKETBASE_HOST = `http://localhost:8090`;
+const POCKETBASE_HOST = process.env.POCKETBASE_URL || 'http://localhost:8090';
+const POCKETBASE_HEALTH_RETRIES = Number(process.env.POCKETBASE_HEALTH_RETRIES || 30);
 
-async function waitForHealth({ retries = 10, delayMs = 1000 } = {}) {
+async function waitForHealth({ retries = POCKETBASE_HEALTH_RETRIES, delayMs = 1000 } = {}) {
     for (let i = 1; i <= retries; i++) {
         try {
             const response = await fetch(`${POCKETBASE_HOST}/api/health`, { method: 'HEAD' });
@@ -31,10 +32,14 @@ pocketbaseClient.autoCancellation(false);
 
 let authPromise = null;
 
-pocketbaseClient.beforeSend = async function (url, options) {
-    if (url.includes('/api/collections/_superusers/auth-with-password')) {
-        return { url, options };
+function assertPocketBaseCredentials() {
+    if (!process.env.PB_SUPERUSER_EMAIL || !process.env.PB_SUPERUSER_PASSWORD) {
+        throw new Error('PB_SUPERUSER_EMAIL and PB_SUPERUSER_PASSWORD must be configured');
     }
+}
+
+async function authenticateSuperuser() {
+    assertPocketBaseCredentials();
 
     if (!pocketbaseClient.authStore.isValid && !authPromise) {
         authPromise = pocketbaseClient.collection('_superusers').authWithPassword(
@@ -48,6 +53,14 @@ pocketbaseClient.beforeSend = async function (url, options) {
     if (authPromise) {
         await authPromise;
     }
+}
+
+pocketbaseClient.beforeSend = async function (url, options) {
+    if (url.includes('/api/collections/_superusers/auth-with-password')) {
+        return { url, options };
+    }
+
+    await authenticateSuperuser();
 
     if (pocketbaseClient.authStore.isValid && pocketbaseClient.authStore.token) {
         options.headers = options.headers || {};
@@ -60,19 +73,7 @@ pocketbaseClient.beforeSend = async function (url, options) {
 (async () => {
     try {
         await waitForHealth();
-
-        if (!pocketbaseClient.authStore.isValid && !authPromise) {
-            authPromise = pocketbaseClient.collection('_superusers').authWithPassword(
-                process.env.PB_SUPERUSER_EMAIL,
-                process.env.PB_SUPERUSER_PASSWORD,
-            ).finally(() => {
-                authPromise = null;
-            });
-        }
-        
-        if (authPromise) {
-            await authPromise;
-        }
+        await authenticateSuperuser();
         
         logger.info('PocketBase client initialized successfully');
     } catch (err) {
