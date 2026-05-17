@@ -21,6 +21,7 @@ const webDistPath = process.env.WEB_DIST_PATH
 	: path.resolve(__dirname, '../../../dist/apps/web');
 const webIndexPath = path.join(webDistPath, 'index.html');
 const apiPrefixes = [
+	'/api',
 	'/hcgi/api',
 	'/hcgi/platform',
 	'/platform',
@@ -259,6 +260,7 @@ app.use(express.urlencoded({
 app.use(attachAuth);
 
 const apiRoutes = routes();
+app.use('/api', apiRoutes);
 app.use('/hcgi/api', apiRoutes);
 app.use('/', apiRoutes);
 
