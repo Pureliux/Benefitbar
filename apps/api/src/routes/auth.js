@@ -10,7 +10,6 @@ import {
   hashToken,
   isSessionConfigured,
   logAuthEvent,
-  nextLoginMethodAfterPasswordSet,
   normalizeEmail,
   syncPocketBaseAuthUser,
 } from '../utils/tokenUtils.js';
@@ -24,14 +23,12 @@ import {
 const router = express.Router();
 
 const TOKEN_EXPIRY_HOURS = 24;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const EMAIL_DOMAIN_MESSAGE = 'Bitte verwende deine @eduscho.at-E-Mail-Adresse.';
 const TECHNICAL_LOGIN_MESSAGE = 'Die Anmeldung konnte technisch nicht verarbeitet werden. Bitte später erneut versuchen.';
 const TECHNICAL_ACTION_MESSAGE = 'Die Anfrage konnte technisch nicht verarbeitet werden. Bitte später erneut versuchen.';
 const EMAIL_NOT_CONFIGURED_MESSAGE = 'Der E-Mail-Versand ist aktuell nicht konfiguriert. Bitte kontaktiere HR/Prozessmanagement.';
 const ACCESS_NEUTRAL_MESSAGE = 'Falls für diese E-Mail-Adresse ein aktiver Zugang besteht, wurde eine E-Mail mit weiteren Schritten versendet.';
 const RESET_NEUTRAL_MESSAGE = 'Falls für diese Adresse ein aktiver Zugang besteht, wurde eine E-Mail zum Zurücksetzen des Passworts versendet.';
-const MICROSOFT_NOT_CONFIGURED_MESSAGE = 'Microsoft-Anmeldung ist aktuell nicht konfiguriert. Bitte verwende E-Mail und Passwort.';
 
 function error(res, status, message, errorCode) {
   return res.status(status).json({
@@ -53,20 +50,6 @@ function addHours(date, hours) {
   return new Date(date.getTime() + hours * 60 * 60 * 1000).toISOString();
 }
 
-function microsoftConfigStatus() {
-  const variables = {
-    MICROSOFT_CLIENT_ID: Boolean(process.env.MICROSOFT_CLIENT_ID),
-    MICROSOFT_CLIENT_SECRET: Boolean(process.env.MICROSOFT_CLIENT_SECRET),
-    MICROSOFT_TENANT_ID: Boolean(process.env.MICROSOFT_TENANT_ID),
-    MICROSOFT_REDIRECT_URI: Boolean(process.env.MICROSOFT_REDIRECT_URI),
-  };
-
-  return {
-    configured: Object.values(variables).every(Boolean),
-    variables,
-  };
-}
-
 function safeEmployeeRecord(employee) {
   const {
     passwordHash,
@@ -81,16 +64,6 @@ function safeEmployeeRecord(employee) {
     ...safeEmployee,
     passwordSet: Boolean(passwordHash),
   };
-}
-
-function frontendRedirect(path, params = {}) {
-  const url = new URL(path, FRONTEND_URL);
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) {
-      url.searchParams.set(key, value);
-    }
-  });
-  return url.toString();
 }
 
 async function findEmployeeByToken(fieldName, token) {
@@ -182,7 +155,7 @@ router.post('/login', async (req, res) => {
   try {
     const updatedEmployee = await pb.collection('employees').update(employee.id, {
       lastLoginAt: new Date().toISOString(),
-      loginMethod: employee.loginMethod === 'microsoft' ? 'both' : (employee.loginMethod || 'email_password'),
+      loginMethod: 'email_password',
     });
 
     const session = await buildSessionResponse(updatedEmployee, password);
@@ -298,7 +271,7 @@ router.post('/activate', async (req, res) => {
       passwordHash: hashPassword(password),
       passwordSetAt: new Date().toISOString(),
       authStatus: 'active',
-      loginMethod: nextLoginMethodAfterPasswordSet(employee.loginMethod),
+      loginMethod: 'email_password',
       activationTokenHash: '',
       activationTokenExpiresAt: '',
     });
@@ -407,7 +380,7 @@ router.post('/reset-password', async (req, res) => {
       passwordHash: hashPassword(password),
       passwordSetAt: new Date().toISOString(),
       authStatus: 'active',
-      loginMethod: nextLoginMethodAfterPasswordSet(employee.loginMethod),
+      loginMethod: 'email_password',
       resetTokenHash: '',
       resetTokenExpiresAt: '',
     });
@@ -457,118 +430,6 @@ router.get('/validate-token', async (req, res) => {
     type: activationValid ? 'activation' : 'reset',
     expiresAt: activationValid ? employee.activationTokenExpiresAt : employee.resetTokenExpiresAt,
   });
-});
-
-router.get('/microsoft/status', async (req, res) => {
-  const status = microsoftConfigStatus();
-  if (!status.configured) {
-    await logAuthEvent({
-      req,
-      action: 'microsoft_login_not_configured',
-      status: 'failed',
-      errorCode: 'microsoft_not_configured',
-      errorMessage: MICROSOFT_NOT_CONFIGURED_MESSAGE,
-    });
-  }
-  return res.json(status);
-});
-
-router.get('/microsoft', async (req, res) => {
-  const status = microsoftConfigStatus();
-  if (!status.configured) {
-    await logAuthEvent({
-      req,
-      action: 'microsoft_login_not_configured',
-      status: 'failed',
-      errorCode: 'microsoft_not_configured',
-      errorMessage: MICROSOFT_NOT_CONFIGURED_MESSAGE,
-    });
-    return res.redirect(frontendRedirect('/login', { authError: 'microsoft_not_configured' }));
-  }
-
-  const params = new URLSearchParams({
-    client_id: process.env.MICROSOFT_CLIENT_ID,
-    response_type: 'code',
-    redirect_uri: process.env.MICROSOFT_REDIRECT_URI,
-    response_mode: 'query',
-    scope: 'openid profile email User.Read',
-  });
-
-  await logAuthEvent({ req, action: 'microsoft_login_started', status: 'success' });
-  return res.redirect(`https://login.microsoftonline.com/${process.env.MICROSOFT_TENANT_ID}/oauth2/v2.0/authorize?${params.toString()}`);
-});
-
-router.get('/microsoft/callback', async (req, res) => {
-  const { code } = req.query;
-
-  if (!code || !microsoftConfigStatus().configured) {
-    await logAuthEvent({ req, action: 'microsoft_login_failed', status: 'failed', errorCode: 'missing_code_or_config' });
-    return res.redirect(frontendRedirect('/login', { authError: 'microsoft_failed' }));
-  }
-
-  try {
-    const tokenResponse = await fetch(`https://login.microsoftonline.com/${process.env.MICROSOFT_TENANT_ID}/oauth2/v2.0/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: process.env.MICROSOFT_CLIENT_ID,
-        client_secret: process.env.MICROSOFT_CLIENT_SECRET,
-        code,
-        redirect_uri: process.env.MICROSOFT_REDIRECT_URI,
-        grant_type: 'authorization_code',
-      }),
-    });
-
-    if (!tokenResponse.ok) {
-      throw new Error(`Microsoft token exchange failed: ${tokenResponse.status}`);
-    }
-
-    const tokenData = await tokenResponse.json();
-    const profileResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    });
-
-    if (!profileResponse.ok) {
-      throw new Error(`Microsoft profile fetch failed: ${profileResponse.status}`);
-    }
-
-    const profile = await profileResponse.json();
-    const email = normalizeEmail(profile.mail || profile.userPrincipalName);
-
-    if (!isEduschoEmail(email)) {
-      await logAuthEvent({ req, action: 'microsoft_login_failed', email, status: 'failed', errorCode: 'invalid_domain' });
-      return res.redirect(frontendRedirect('/login', { authError: 'microsoft_failed' }));
-    }
-
-    let employee;
-    try {
-      employee = await findEmployeeByEmail(email);
-    } catch {
-      await logAuthEvent({ req, action: 'microsoft_login_failed', email, status: 'failed', errorCode: 'user_not_found' });
-      return res.redirect(frontendRedirect('/login', { authError: 'microsoft_failed' }));
-    }
-
-    if (employee.status !== 'active' || employee.authStatus === 'locked') {
-      await logAuthEvent({ req, action: 'microsoft_login_failed', email, status: 'failed', errorCode: 'account_inactive' });
-      return res.redirect(frontendRedirect('/login', { authError: 'microsoft_failed' }));
-    }
-
-    employee = await pb.collection('employees').update(employee.id, {
-      lastLoginAt: new Date().toISOString(),
-      authStatus: 'active',
-      loginMethod: employee.passwordHash ? 'both' : 'microsoft',
-    });
-
-    await syncPocketBaseAuthUser(employee);
-    const session = await buildSessionResponse(employee);
-    await logAuthEvent({ req, action: 'microsoft_login_successful', email, status: 'success' });
-
-    return res.redirect(frontendRedirect('/dashboard', { authToken: session.token }));
-  } catch (err) {
-    logger.error('Microsoft login failed:', err);
-    await logAuthEvent({ req, action: 'microsoft_login_failed', status: 'failed', errorCode: 'technical_error', errorMessage: err.message });
-    return res.redirect(frontendRedirect('/login', { authError: 'microsoft_failed' }));
-  }
 });
 
 export default router;

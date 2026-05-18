@@ -78,10 +78,6 @@ function benefitbar_config(): array
         'SMTP_FROM' => getenv('SMTP_FROM') ?: '',
         'SMTP_SECURE' => getenv('SMTP_SECURE') ?: '',
         'HR_NOTIFICATION_EMAIL' => getenv('HR_NOTIFICATION_EMAIL') ?: 'prozessmanagement@eduscho.at',
-        'MICROSOFT_CLIENT_ID' => getenv('MICROSOFT_CLIENT_ID') ?: '',
-        'MICROSOFT_CLIENT_SECRET' => getenv('MICROSOFT_CLIENT_SECRET') ?: '',
-        'MICROSOFT_TENANT_ID' => getenv('MICROSOFT_TENANT_ID') ?: '',
-        'MICROSOFT_REDIRECT_URI' => getenv('MICROSOFT_REDIRECT_URI') ?: '',
     ];
 
     foreach (benefitbar_local_config_paths() as $localConfig) {

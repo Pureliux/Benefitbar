@@ -5,7 +5,7 @@ import Header from '@/components/Header.jsx';
 import apiServerClient from '@/lib/apiServerClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Server, Mail, ShieldAlert, CheckCircle2, XCircle, Database } from 'lucide-react';
+import { Mail, ShieldAlert, CheckCircle2, XCircle, Database } from 'lucide-react';
 import { format } from 'date-fns';
 import ErrorAlert from '@/components/ErrorAlert.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -213,21 +213,8 @@ const AdminSystemCheck = () => {
                     ))}
                   </div>
                   <div className="flex justify-between items-center p-3 bg-background border border-border rounded-lg">
-                    <span className="text-muted-foreground flex items-center gap-2"><Server className="h-4 w-4"/> Microsoft OAuth konfiguriert</span>
-                    <span><StatusIcon status={stats.microsoftOAuthConfigured} /></span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    {[
-                      ['MICROSOFT_CLIENT_ID', 'Microsoft Client ID vorhanden'],
-                      ['MICROSOFT_TENANT_ID', 'Microsoft Tenant ID vorhanden'],
-                      ['MICROSOFT_CLIENT_SECRET', 'Microsoft Secret vorhanden'],
-                      ['MICROSOFT_REDIRECT_URI', 'Microsoft Redirect URI vorhanden'],
-                    ].map(([key, label]) => (
-                      <div key={key} className="flex justify-between items-center p-2 bg-background border border-border rounded">
-                        <span className="text-muted-foreground">{label}</span>
-                        <StatusIcon status={Boolean(stats.microsoft?.[key])} />
-                      </div>
-                    ))}
+                    <span className="text-muted-foreground flex items-center gap-2"><ShieldAlert className="h-4 w-4"/> Auth-Modus</span>
+                    <span className="text-foreground">E-Mail und Passwort</span>
                   </div>
                 </div>
 

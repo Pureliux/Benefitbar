@@ -27,7 +27,6 @@ const apiPrefixes = [
 	'/platform',
 	'/auth',
 	'/admin',
-	'/oauth',
 	'/submissions',
 	'/attachments',
 	'/audit-log',

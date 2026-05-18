@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Eye, EyeOff } from 'lucide-react';
@@ -82,9 +82,8 @@ function BenefitImageCard({ card, compact = false }) {
 }
 
 const LoginPage = () => {
-  const { login, requestAccess, loginWithMicrosoft, microsoftMessages } = useAuth();
+  const { login, requestAccess } = useAuth();
   const navigate = useNavigate();
-  const { notConfigured: microsoftNotConfigured, failed: microsoftFailed } = microsoftMessages;
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -93,22 +92,6 @@ const LoginPage = () => {
   const [loadingAction, setLoadingAction] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const authError = params.get('authError');
-    if (authError === 'microsoft_not_configured') {
-      setErrorMsg(microsoftNotConfigured);
-    }
-    if (authError === 'microsoft_failed') {
-      setErrorMsg(microsoftFailed);
-    }
-    if (authError) {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('authError');
-      window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
-    }
-  }, [microsoftFailed, microsoftNotConfigured]);
 
   const clearMessages = () => {
     setErrorMsg(null);
@@ -170,16 +153,6 @@ const LoginPage = () => {
       setSignupEmail('');
     }
     setLoadingAction(null);
-  };
-
-  const handleMicrosoftLogin = async () => {
-    clearMessages();
-    setLoadingAction('microsoft');
-    const result = await loginWithMicrosoft();
-    if (!result.success) {
-      setErrorMsg(result.error || microsoftNotConfigured);
-      setLoadingAction(null);
-    }
   };
 
   return (
@@ -283,25 +256,6 @@ const LoginPage = () => {
                   </Button>
                 </form>
 
-                <div className="mt-7">
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-[#E7DDBF] dark:border-[#3A3425]" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-3 font-medium text-[#777777] dark:bg-[#1F1D1A] dark:text-[#AFA694]">Oder</span>
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={handleMicrosoftLogin}
-                    disabled={Boolean(loadingAction)}
-                    variant="outline"
-                    className="mt-5 w-full border-[#D7C99F] bg-white text-[#222222] hover:bg-[#F4F1EA] dark:border-[#514733] dark:bg-[#151412] dark:text-[#F7F2E8] dark:hover:bg-[#2A2721]"
-                  >
-                    {loadingAction === 'microsoft' ? 'Wird geprüft ...' : 'Mit Microsoft anmelden'}
-                  </Button>
-                </div>
               </TabsContent>
 
               <TabsContent value="signup">

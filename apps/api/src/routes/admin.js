@@ -164,13 +164,6 @@ router.get('/system-check', async (req, res) => {
   }
 
   const emailStatus = getEmailConfigStatus();
-  const microsoftVariables = {
-    MICROSOFT_CLIENT_ID: Boolean(process.env.MICROSOFT_CLIENT_ID),
-    MICROSOFT_CLIENT_SECRET: Boolean(process.env.MICROSOFT_CLIENT_SECRET),
-    MICROSOFT_TENANT_ID: Boolean(process.env.MICROSOFT_TENANT_ID),
-    MICROSOFT_REDIRECT_URI: Boolean(process.env.MICROSOFT_REDIRECT_URI),
-  };
-  const microsoftOAuthConfigured = Object.values(microsoftVariables).every(Boolean);
 
   const allEmployees = await pb.collection('employees').getFullList();
   const activeUsers = allEmployees.filter((employee) => employee.status === 'active');
@@ -191,8 +184,7 @@ router.get('/system-check', async (req, res) => {
     authSystemActive: databaseConnected && isSessionConfigured(),
     emailServiceConfigured: emailStatus.configured,
     smtp: emailStatus.variables,
-    microsoftOAuthConfigured,
-    microsoft: microsoftVariables,
+    authProvider: 'email_password',
     activeUserCount: activeUsers.length,
     usersWithPassword: usersWithPassword.length,
     usersWithoutPassword: usersWithoutPassword.length,

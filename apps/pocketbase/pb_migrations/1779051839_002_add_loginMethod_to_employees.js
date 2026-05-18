@@ -13,7 +13,7 @@ migrate((app) => {
   collection.fields.add(new SelectField({
     name: "loginMethod",
     required: false,
-    values: ["microsoft", "email_password", "both"]
+    values: ["email_password"]
   }));
 
   return app.save(collection);

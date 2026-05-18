@@ -4,9 +4,6 @@ import pb from '@/lib/pocketbaseClient';
 import apiServerClient from '@/lib/apiServerClient';
 
 const AuthContext = createContext(null);
-const API_SERVER_URL = (import.meta.env.VITE_API_SERVER_URL || '/api/index.php').replace(/\/$/, '');
-const MICROSOFT_NOT_CONFIGURED_MESSAGE = 'Microsoft-Anmeldung ist aktuell nicht konfiguriert. Bitte verwende E-Mail und Passwort.';
-const MICROSOFT_FAILED_MESSAGE = 'Microsoft-Anmeldung konnte nicht abgeschlossen werden. Bitte verwende E-Mail und Passwort.';
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -227,32 +224,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const isMicrosoftConfigured = async () => {
-    try {
-      const res = await apiServerClient.fetch('/auth/microsoft/status');
-      if (!res.ok) {
-        return { configured: false };
-      }
-      const contentType = res.headers.get('Content-Type') || '';
-      if (!contentType.includes('application/json')) {
-        return { configured: false, error: 'Verbindung zum Server konnte nicht hergestellt werden.' };
-      }
-      return await res.json();
-    } catch {
-      return { configured: false, error: 'Verbindung zum Server konnte nicht hergestellt werden.' };
-    }
-  };
-
-  const loginWithMicrosoft = async () => {
-    const result = await isMicrosoftConfigured();
-    if (!result.configured) {
-      return { success: false, error: result.error || MICROSOFT_NOT_CONFIGURED_MESSAGE };
-    }
-
-    window.location.href = `${API_SERVER_URL}/auth/microsoft`;
-    return { success: true };
-  };
-
   const logout = () => {
     clearSession();
     navigate('/login');
@@ -275,15 +246,9 @@ export const AuthProvider = ({ children }) => {
         resetPassword,
         createUser,
         validateToken,
-        isMicrosoftConfigured,
-        loginWithMicrosoft,
         logout,
         hydrateSession,
         initialLoading,
-        microsoftMessages: {
-          notConfigured: MICROSOFT_NOT_CONFIGURED_MESSAGE,
-          failed: MICROSOFT_FAILED_MESSAGE,
-        },
       }}
     >
       {children}

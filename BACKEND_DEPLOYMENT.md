@@ -46,15 +46,6 @@ SMTP_PASSWORD=
 SMTP_FROM=
 ```
 
-Microsoft Login:
-
-```env
-MICROSOFT_CLIENT_ID=
-MICROSOFT_CLIENT_SECRET=
-MICROSOFT_TENANT_ID=
-MICROSOFT_REDIRECT_URI=https://DEINE-BACKEND-DOMAIN/hcgi/api/auth/microsoft/callback
-```
-
 ## 3. Frontend mit Backend verbinden
 
 Im Hostinger-Horizons-Frontend diese Build-Variablen setzen und danach das Frontend neu deployen:

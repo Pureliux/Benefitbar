@@ -23,13 +23,13 @@ DB_PASSWORD: dein Datenbankpasswort
 
 ## 2. PHP-Konfiguration anlegen
 
-Nach dem Deploy im Hostinger-Dateimanager in diesem Ordner:
+Nach dem Deploy im Hostinger-Dateimanager im Account-Root, also neben `public_html`:
 
 ```text
-public_html/api/
+benefitbar.config.php
 ```
 
-die Datei `config.local.php` anlegen.
+Die Datei nicht in `public_html/api` ablegen, weil dieser Ordner bei Deployments ueberschrieben werden kann.
 
 Inhalt:
 
@@ -57,15 +57,10 @@ return [
     'SMTP_PASSWORD' => '',
     'SMTP_FROM' => '',
     'SMTP_SECURE' => '',
-
-    'MICROSOFT_CLIENT_ID' => '',
-    'MICROSOFT_CLIENT_SECRET' => '',
-    'MICROSOFT_TENANT_ID' => '',
-    'MICROSOFT_REDIRECT_URI' => '',
 ];
 ```
 
-Die Datei `config.local.php` wird nicht ins Git geschrieben.
+Die Datei `benefitbar.config.php` wird nicht ins Git geschrieben.
 
 ## 3. Frontend neu deployen
 
@@ -99,11 +94,3 @@ https://salmon-jellyfish-485958.hostingersite.com/api/index.php/health?debug=DEI
 Diese Debug-URL zeigt technische Details nur, wenn der Setup-Key stimmt. Den Key und Datenbankpasswoerter nie oeffentlich teilen.
 
 Wenn das funktioniert, laufen Login, Zugang anfordern, Passwort vergessen und Admin-User-Anlage ueber PHP/MySQL.
-
-## 5. Microsoft Redirect URI
-
-Wenn Microsoft OAuth konfiguriert wird:
-
-```text
-https://salmon-jellyfish-485958.hostingersite.com/api/index.php/auth/microsoft/callback
-```

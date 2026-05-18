@@ -21,9 +21,4 @@ return [
     'SMTP_PASSWORD' => '',
     'SMTP_FROM' => '',
     'SMTP_SECURE' => '',
-
-    'MICROSOFT_CLIENT_ID' => '',
-    'MICROSOFT_CLIENT_SECRET' => '',
-    'MICROSOFT_TENANT_ID' => '',
-    'MICROSOFT_REDIRECT_URI' => '',
 ];

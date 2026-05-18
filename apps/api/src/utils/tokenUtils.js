@@ -165,10 +165,6 @@ export async function findEmployeeByEmail(email) {
   return pb.collection('employees').getFirstListItem(`email = "${escapePbString(normalizedEmail)}"`);
 }
 
-export function nextLoginMethodAfterPasswordSet(currentLoginMethod) {
-  return currentLoginMethod === 'microsoft' ? 'both' : 'email_password';
-}
-
 export async function syncPocketBaseAuthUser(employee, password) {
   try {
     const data = {

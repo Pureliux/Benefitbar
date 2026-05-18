@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-mail-ui-v3';
+const BENEFITBAR_API_VERSION = '2026-05-18-email-only-v4';
 
 header('X-Content-Type-Options: nosniff');
 
@@ -44,12 +44,6 @@ function string_ends_with(string $value, string $suffix): bool
     }
 
     return substr($value, -strlen($suffix)) === $suffix;
-}
-
-function redirect_to(string $url): void
-{
-    header('Location: ' . $url, true, 302);
-    exit;
 }
 
 function request_json(): array
@@ -1003,59 +997,6 @@ function find_user_by_token(string $column, string $token): ?array
     return $user ?: null;
 }
 
-function microsoft_config_status(): array
-{
-    $redirectUri = config_value('MICROSOFT_REDIRECT_URI');
-    if ($redirectUri === '') {
-        $redirectUri = rtrim(config_value('FRONTEND_URL'), '/') . '/api/index.php/auth/microsoft/callback';
-    }
-
-    $variables = [
-        'MICROSOFT_CLIENT_ID' => config_value('MICROSOFT_CLIENT_ID') !== '',
-        'MICROSOFT_CLIENT_SECRET' => config_value('MICROSOFT_CLIENT_SECRET') !== '',
-        'MICROSOFT_TENANT_ID' => microsoft_tenant_id() !== '',
-        'MICROSOFT_REDIRECT_URI' => $redirectUri !== '',
-    ];
-    return [
-        'configured' => !in_array(false, $variables, true),
-        'variables' => $variables,
-        'redirectUri' => $redirectUri,
-    ];
-}
-
-function microsoft_redirect_uri(): string
-{
-    return config_value('MICROSOFT_REDIRECT_URI') ?: (rtrim(config_value('FRONTEND_URL'), '/') . '/api/index.php/auth/microsoft/callback');
-}
-
-function microsoft_tenant_id(): string
-{
-    return config_value('MICROSOFT_TENANT_ID') ?: 'organizations';
-}
-
-function http_json(string $url, array $options = []): array
-{
-    $context = stream_context_create($options);
-    $body = file_get_contents($url, false, $context);
-    if ($body === false) {
-        throw new RuntimeException('HTTP request failed');
-    }
-    $json = json_decode($body, true);
-    if (!is_array($json)) {
-        throw new RuntimeException('Invalid JSON response');
-    }
-    return $json;
-}
-
-function frontend_redirect(string $path, array $params = []): string
-{
-    $url = rtrim(config_value('FRONTEND_URL'), '/') . $path;
-    if ($params) {
-        $url .= '?' . http_build_query($params);
-    }
-    return $url;
-}
-
 function handle_login(): void
 {
     $body = request_json();
@@ -1088,9 +1029,8 @@ function handle_login(): void
         json_response(['success' => false, 'error' => 'E-Mail-Adresse oder Passwort ist falsch.', 'errorCode' => 'invalid_password'], 401);
     }
 
-    $stmt = db()->prepare("UPDATE bb_users SET last_login_at = ?, login_method = ?, updated_at = ? WHERE id = ?");
-    $loginMethod = $user['login_method'] === 'microsoft' ? 'both' : ($user['login_method'] ?: 'email_password');
-    $stmt->execute([now_sql(), $loginMethod, now_sql(), $user['id']]);
+    $stmt = db()->prepare("UPDATE bb_users SET last_login_at = ?, login_method = 'email_password', updated_at = ? WHERE id = ?");
+    $stmt->execute([now_sql(), now_sql(), $user['id']]);
     $user = find_user_by_id((int)$user['id']);
 
     log_auth('login_successful', $email, 'success');
@@ -1213,9 +1153,9 @@ function handle_set_password(string $type): void
     }
 
     if ($type === 'activation') {
-        $sql = "UPDATE bb_users SET password_hash = ?, password_set_at = ?, auth_status = 'active', login_method = IF(login_method = 'microsoft', 'both', 'email_password'), activation_token_hash = NULL, activation_token_expires_at = NULL, updated_at = ? WHERE id = ?";
+        $sql = "UPDATE bb_users SET password_hash = ?, password_set_at = ?, auth_status = 'active', login_method = 'email_password', activation_token_hash = NULL, activation_token_expires_at = NULL, updated_at = ? WHERE id = ?";
     } else {
-        $sql = "UPDATE bb_users SET password_hash = ?, password_set_at = ?, auth_status = 'active', login_method = IF(login_method = 'microsoft', 'both', 'email_password'), reset_token_hash = NULL, reset_token_expires_at = NULL, updated_at = ? WHERE id = ?";
+        $sql = "UPDATE bb_users SET password_hash = ?, password_set_at = ?, auth_status = 'active', login_method = 'email_password', reset_token_hash = NULL, reset_token_expires_at = NULL, updated_at = ? WHERE id = ?";
     }
 
     db()->prepare($sql)->execute([password_hash($password, PASSWORD_DEFAULT), now_sql(), now_sql(), $user['id']]);
@@ -1564,8 +1504,6 @@ function handle_admin_system_check(): void
         'SMTP_PASSWORD' => config_value('SMTP_PASSWORD') !== '',
         'SMTP_FROM' => config_value('SMTP_FROM') !== '',
     ];
-    $microsoft = microsoft_config_status();
-
     $loginErrorsStmt = db()->query("
         SELECT created_at timestamp, email, error_code errorCode
         FROM bb_auth_log
@@ -1587,80 +1525,13 @@ function handle_admin_system_check(): void
         'authSystemActive' => config_value('JWT_SECRET') !== '',
         'emailServiceConfigured' => email_configured(),
         'smtp' => $smtp,
-        'microsoftOAuthConfigured' => $microsoft['configured'],
-        'microsoft' => $microsoft['variables'],
+        'authProvider' => 'email_password',
         'activeUserCount' => (int)($counts['active_users'] ?? 0),
         'usersWithPassword' => (int)($counts['users_with_password'] ?? 0),
         'usersWithoutPassword' => (int)($counts['users_without_password'] ?? 0),
         'recentLoginErrors' => $loginErrorsStmt->fetchAll(),
         'recentEmailErrors' => $emailErrorsStmt->fetchAll(),
     ]);
-}
-
-function handle_microsoft_callback(): void
-{
-    $code = (string)($_GET['code'] ?? '');
-    $status = microsoft_config_status();
-    if (!$code || !$status['configured']) {
-        redirect_to(frontend_redirect('/login', ['authError' => 'microsoft_failed']));
-    }
-
-    try {
-        $tenant = microsoft_tenant_id();
-        $tokenData = http_json("https://login.microsoftonline.com/{$tenant}/oauth2/v2.0/token", [
-            'http' => [
-                'method' => 'POST',
-                'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
-                'content' => http_build_query([
-                    'client_id' => config_value('MICROSOFT_CLIENT_ID'),
-                    'client_secret' => config_value('MICROSOFT_CLIENT_SECRET'),
-                    'code' => $code,
-                    'redirect_uri' => microsoft_redirect_uri(),
-                    'grant_type' => 'authorization_code',
-                ]),
-            ],
-        ]);
-
-        $profile = http_json('https://graph.microsoft.com/v1.0/me', [
-            'http' => ['header' => 'Authorization: Bearer ' . $tokenData['access_token'] . "\r\n"],
-        ]);
-
-        $email = normalize_email($profile['mail'] ?? $profile['userPrincipalName'] ?? '');
-        if (!is_eduscho_email($email)) {
-            throw new RuntimeException('invalid_domain');
-        }
-        $user = find_user_by_email($email);
-        if (!$user) {
-            $namePart = explode('@', $email)[0] ?? '';
-            $nameParts = array_values(array_filter(explode('.', $namePart)));
-            $firstName = isset($nameParts[0]) ? ucfirst($nameParts[0]) : '';
-            $lastName = isset($nameParts[1]) ? ucfirst($nameParts[1]) : '';
-            $now = now_sql();
-
-            db()->prepare("
-                INSERT INTO bb_users (
-                    email, first_name, last_name, status, auth_status, password_hash, password_set_at,
-                    login_method, is_admin, created_at, updated_at
-                ) VALUES (?, ?, ?, 'active', 'active', NULL, NULL, 'microsoft', 0, ?, ?)
-            ")->execute([$email, $firstName, $lastName, $now, $now]);
-
-            $user = find_user_by_email($email);
-            log_auth('microsoft_user_auto_created', $email, 'success');
-        }
-
-        if (!$user || $user['status'] !== 'active' || $user['auth_status'] === 'locked') {
-            throw new RuntimeException('user_not_active');
-        }
-
-        db()->prepare("UPDATE bb_users SET last_login_at = ?, auth_status = 'active', login_method = IF(password_hash IS NULL OR password_hash = '', 'microsoft', 'both'), updated_at = ? WHERE id = ?")
-            ->execute([now_sql(), now_sql(), $user['id']]);
-        $user = find_user_by_id((int)$user['id']);
-        log_auth('microsoft_login_successful', $email, 'success');
-        redirect_to(frontend_redirect('/dashboard', ['authToken' => create_session_token($user)]));
-    } catch (Throwable $error) {
-        log_auth('microsoft_login_failed', null, 'failed', 'technical_error', $error->getMessage());
-        redirect_to(frontend_redirect('/login', ['authError' => 'microsoft_failed']));
-    }
 }
 
 try {
@@ -1708,25 +1579,6 @@ try {
     if ($method === 'POST' && $path === '/auth/activate') handle_set_password('activation');
     if ($method === 'POST' && $path === '/auth/reset-password') handle_set_password('reset');
     if ($method === 'GET' && $path === '/auth/validate-token') handle_validate_token();
-    if ($method === 'GET' && $path === '/auth/microsoft/status') json_response(microsoft_config_status());
-    if ($method === 'GET' && $path === '/auth/microsoft') {
-        $status = microsoft_config_status();
-        if (!$status['configured']) {
-            log_auth('microsoft_login_not_configured', null, 'failed', 'microsoft_not_configured');
-            redirect_to(frontend_redirect('/login', ['authError' => 'microsoft_not_configured']));
-        }
-        log_auth('microsoft_login_started', null, 'success');
-        $params = http_build_query([
-            'client_id' => config_value('MICROSOFT_CLIENT_ID'),
-            'response_type' => 'code',
-            'redirect_uri' => microsoft_redirect_uri(),
-            'response_mode' => 'query',
-            'scope' => 'openid profile email User.Read',
-        ]);
-        redirect_to('https://login.microsoftonline.com/' . microsoft_tenant_id() . '/oauth2/v2.0/authorize?' . $params);
-    }
-    if ($method === 'GET' && $path === '/auth/microsoft/callback') handle_microsoft_callback();
-
     if ($method === 'GET' && $path === '/benefits/overview') handle_benefits_overview();
     if ($method === 'POST' && $path === '/benefits/select') handle_select_benefit();
     if ($method === 'POST' && $path === '/benefits/custom') handle_add_custom_benefit();
