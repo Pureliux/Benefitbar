@@ -50,7 +50,7 @@ const HelpPage = () => {
 
       <Header />
 
-      <main className="min-h-[calc(100vh-4rem)] bg-[#F4F1EA] py-8 text-[#222222] transition-colors dark:bg-[#171614] dark:text-[#F7F2E8]">
+      <main className="benefit-ambient-bg min-h-[calc(100vh-4rem)] py-8 text-[#222222] transition-colors dark:text-[#F7F2E8]">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <p className="text-sm font-semibold uppercase text-[#C0A468]">Support</p>

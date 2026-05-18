@@ -55,35 +55,35 @@ html {
   }
 
   .dark {
-    /* Dark Mode Defaults */
-    --background: 0 0% 10%;
-    --foreground: 0 0% 95%;
-    --card: 0 0% 14%;
-    --card-foreground: 0 0% 95%;
-    --popover: 0 0% 14%;
-    --popover-foreground: 0 0% 95%;
+    /* Softer internal dark mode */
+    --background: 38 12% 18%;
+    --foreground: 43 33% 94%;
+    --card: 36 13% 22%;
+    --card-foreground: 43 33% 94%;
+    --popover: 36 13% 22%;
+    --popover-foreground: 43 33% 94%;
     --primary: 41 42% 58%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 20%;
-    --secondary-foreground: 0 0% 95%;
-    --muted: 0 0% 20%;
-    --muted-foreground: 0 0% 65%;
-    --accent: 0 0% 20%;
-    --accent-foreground: 0 0% 95%;
+    --secondary: 37 11% 27%;
+    --secondary-foreground: 43 33% 94%;
+    --muted: 37 11% 27%;
+    --muted-foreground: 42 18% 73%;
+    --accent: 37 11% 27%;
+    --accent-foreground: 43 33% 94%;
     --destructive: 359 79% 62%;
     --destructive-foreground: 0 0% 100%;
     --success: 116 20% 52%;
     --success-foreground: 0 0% 100%;
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
+    --border: 38 12% 31%;
+    --input: 38 12% 31%;
     --ring: 41 42% 58%;
-    --sidebar-background: 0 0% 14%;
-    --sidebar-foreground: 0 0% 95%;
+    --sidebar-background: 36 13% 22%;
+    --sidebar-foreground: 43 33% 94%;
     --sidebar-primary: 41 42% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 20%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 0 0% 20%;
+    --sidebar-accent: 37 11% 27%;
+    --sidebar-accent-foreground: 43 33% 94%;
+    --sidebar-border: 38 12% 31%;
     --sidebar-ring: 41 42% 58%;
   }
 }
@@ -121,5 +121,33 @@ html {
 @layer components {
   .gold-bar {
     background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary)/.8) 100%);
+  }
+
+  .benefit-ambient-bg {
+    position: relative;
+    isolation: isolate;
+    background-color: #F4F1EA;
+    background-image:
+      url("data:image/svg+xml,%3Csvg width='170' height='130' viewBox='0 0 170 130' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23C0A468' stroke-width='2' stroke-linecap='round' opacity='.16'%3E%3Cpath d='M34 38c14-19 42-12 48 8 6 21-18 44-40 35C20 72 20 57 34 38Z'/%3E%3Cpath d='M44 30c-4 15 2 31 19 45'/%3E%3Cpath d='M126 88c8-13 28-9 32 5 4 14-12 28-27 22-14-6-14-15-5-27Z'/%3E%3Cpath d='M132 82c-2 10 2 20 13 30'/%3E%3C/g%3E%3C/svg%3E"),
+      radial-gradient(circle, rgba(34, 34, 34, 0.045) 0.7px, transparent 0.8px),
+      radial-gradient(circle at 18% 18%, rgba(237, 211, 142, 0.38), transparent 28rem),
+      radial-gradient(circle at 80% 20%, rgba(192, 164, 104, 0.2), transparent 26rem),
+      radial-gradient(circle at 58% 88%, rgba(113, 156, 111, 0.12), transparent 24rem),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(244, 241, 234, 0.92));
+    background-position: 2rem 4rem, 0 0, center, center, center, center;
+    background-size: 18rem 14rem, 1.15rem 1.15rem, auto, auto, auto, auto;
+  }
+
+  .dark .benefit-ambient-bg {
+    background-color: #2B2925;
+    background-image:
+      url("data:image/svg+xml,%3Csvg width='170' height='130' viewBox='0 0 170 130' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23EDD38E' stroke-width='2' stroke-linecap='round' opacity='.14'%3E%3Cpath d='M34 38c14-19 42-12 48 8 6 21-18 44-40 35C20 72 20 57 34 38Z'/%3E%3Cpath d='M44 30c-4 15 2 31 19 45'/%3E%3Cpath d='M126 88c8-13 28-9 32 5 4 14-12 28-27 22-14-6-14-15-5-27Z'/%3E%3Cpath d='M132 82c-2 10 2 20 13 30'/%3E%3C/g%3E%3C/svg%3E"),
+      radial-gradient(circle, rgba(255, 255, 255, 0.052) 0.7px, transparent 0.8px),
+      radial-gradient(circle at 18% 18%, rgba(192, 164, 104, 0.18), transparent 28rem),
+      radial-gradient(circle at 78% 18%, rgba(237, 211, 142, 0.1), transparent 24rem),
+      radial-gradient(circle at 58% 88%, rgba(113, 156, 111, 0.12), transparent 24rem),
+      linear-gradient(135deg, rgba(58, 53, 45, 0.96), rgba(43, 41, 37, 0.98));
+    background-position: 2rem 4rem, 0 0, center, center, center, center;
+    background-size: 18rem 14rem, 1.15rem 1.15rem, auto, auto, auto, auto;
   }
 }

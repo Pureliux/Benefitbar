@@ -106,7 +106,7 @@ const DashboardPage = () => {
 
       <Header />
 
-      <main className="min-h-[calc(100vh-4rem)] bg-[#F4F1EA] py-8 text-[#222222] transition-colors dark:bg-[#171614] dark:text-[#F7F2E8]">
+      <main className="benefit-ambient-bg min-h-[calc(100vh-4rem)] py-8 text-[#222222] transition-colors dark:text-[#F7F2E8]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <section className="mb-8 overflow-hidden rounded-lg border border-[#D8C894] bg-[#23211D] p-6 text-white shadow-xl sm:p-8">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
@@ -151,10 +151,10 @@ const DashboardPage = () => {
                 <WalletCards className="h-6 w-6 text-[#C0A468]" />
               </div>
 
-              <div className="relative h-72">
+              <div className="relative h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={chartData} dataKey="value" innerRadius={78} outerRadius={112} paddingAngle={3} stroke="transparent">
+                    <Pie data={chartData} dataKey="value" innerRadius={92} outerRadius={126} paddingAngle={3} stroke="transparent">
                       {chartData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                     </Pie>
                     <Tooltip formatter={(value) => currency.format(Number(value))} />
@@ -162,7 +162,7 @@ const DashboardPage = () => {
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                   <span className="text-xs uppercase text-muted-foreground">Noch frei</span>
-                  <strong className="text-2xl">{currency.format(remainingBudget)}</strong>
+                  <strong className="max-w-[9rem] text-balance text-xl leading-tight">{currency.format(remainingBudget)}</strong>
                 </div>
               </div>
 

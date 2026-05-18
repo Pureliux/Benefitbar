@@ -163,7 +163,8 @@ const LoginPage = () => {
 
       <Header />
 
-      <main className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-[#F4F1EA] px-4 py-8 text-[#222222] transition-colors duration-300 dark:bg-[#11100E] dark:text-[#F7F2E8] sm:py-10">
+      <main className="benefit-ambient-bg relative min-h-[calc(100vh-4rem)] overflow-hidden px-4 py-8 text-[#222222] transition-colors duration-300 dark:text-[#F7F2E8] sm:py-10">
+        <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.34),transparent_34rem)] dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06),transparent_34rem)]" />
         <div className="pointer-events-none absolute inset-x-0 top-7 hidden justify-between px-8 lg:flex xl:hidden">
           {tabletCards.map((card) => (
             <BenefitImageCard key={`tablet-${card.label}`} card={card} compact />

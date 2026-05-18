@@ -221,7 +221,7 @@ const BenefitSelectionPage = () => {
 
       <Header />
 
-      <main className="min-h-[calc(100vh-4rem)] bg-[#F4F1EA] py-8 text-[#222222] transition-colors dark:bg-[#171614] dark:text-[#F7F2E8]">
+      <main className="benefit-ambient-bg min-h-[calc(100vh-4rem)] py-8 text-[#222222] transition-colors dark:text-[#F7F2E8]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -373,16 +373,16 @@ const BenefitSelectionPage = () => {
               )}
             </section>
 
-            <aside className="sticky top-24 space-y-5 rounded-lg border border-border bg-card p-5 shadow-lg">
+            <aside className="sticky top-24 space-y-5 rounded-lg border border-border bg-card/95 p-5 shadow-lg backdrop-blur-sm dark:bg-card/92">
               <div>
                 <p className="text-sm font-semibold uppercase text-[#C0A468]">Mein Budget</p>
                 <h2 className="mt-1 text-xl font-bold">Aktuelle Übersicht</h2>
               </div>
 
-              <div className="relative h-64">
+              <div className="relative h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={safeChartData} dataKey="value" innerRadius={64} outerRadius={96} paddingAngle={3} stroke="transparent">
+                    <Pie data={safeChartData} dataKey="value" innerRadius={86} outerRadius={124} paddingAngle={3} stroke="transparent">
                       {safeChartData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                     </Pie>
                     <Tooltip formatter={(value) => currency.format(Number(value))} />
@@ -390,7 +390,7 @@ const BenefitSelectionPage = () => {
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                   <span className="text-xs uppercase text-muted-foreground">Noch frei</span>
-                  <strong className="text-2xl">{currency.format(remainingBudget)}</strong>
+                  <strong className="max-w-[9rem] text-balance text-xl leading-tight">{currency.format(remainingBudget)}</strong>
                 </div>
               </div>
 
