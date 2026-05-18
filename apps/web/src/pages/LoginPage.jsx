@@ -73,7 +73,7 @@ function BenefitImageCard({ card, compact = false }) {
     >
       <div className="absolute left-1/2 top-[-0.7rem] z-20 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
         <span className="absolute left-1/2 top-3 z-0 h-5 w-[2px] -translate-x-1/2 rounded-b-full bg-[#111111] shadow-[0_0.2rem_0.25rem_rgba(0,0,0,0.35)]">
-          <span className="absolute bottom-[-3px] left-1/2 h-0 w-0 -translate-x-1/2 border-x-[3px] border-t-[5px] border-x-transparent border-t-[#111111]" />
+          <span className="absolute bottom-[-4px] left-1/2 h-2 w-[2px] -translate-x-1/2 rounded-full bg-[#C8CDD2] shadow-[0_0.1rem_0.18rem_rgba(0,0,0,0.25)]" />
         </span>
         <span
           className="relative z-10 h-6 w-6 rounded-full border-2 border-white shadow-[0_0.55rem_1rem_rgba(34,34,34,0.32),inset_0_0.2rem_0.35rem_rgba(255,255,255,0.55),inset_0_-0.2rem_0.35rem_rgba(0,0,0,0.18)]"
