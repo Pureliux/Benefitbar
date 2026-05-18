@@ -107,7 +107,7 @@ const ActivationPage = () => {
 
             {isValidating ? (
               <div className="text-center text-sm text-muted-foreground py-8">
-                Link wird überprüft...
+                Link wird überprüft …
               </div>
             ) : (
               <>

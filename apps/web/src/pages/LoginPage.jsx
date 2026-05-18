@@ -60,8 +60,8 @@ function BenefitImageCard({ card, compact = false }) {
     <div
       className={
         compact
-          ? 'relative h-28 w-48 overflow-hidden rounded-lg border-[6px] border-white bg-white shadow-xl ring-1 ring-black/5 dark:border-[#2A2925] dark:bg-[#2A2925] dark:ring-white/10'
-          : `absolute h-[13.5rem] w-[23rem] overflow-hidden rounded-lg border-[8px] border-white bg-white shadow-2xl ring-1 ring-black/5 dark:border-[#2A2925] dark:bg-[#2A2925] dark:ring-white/10 2xl:h-56 2xl:w-96 ${card.className}`
+          ? 'relative h-28 w-48 overflow-hidden rounded-lg border-[6px] border-white bg-white shadow-xl ring-1 ring-black/5 dark:border-[#30333A] dark:bg-[#30333A] dark:ring-white/10'
+          : `absolute h-[13.5rem] w-[23rem] overflow-hidden rounded-lg border-[8px] border-white bg-white shadow-2xl ring-1 ring-black/5 dark:border-[#30333A] dark:bg-[#30333A] dark:ring-white/10 2xl:h-56 2xl:w-96 ${card.className}`
       }
       aria-hidden="true"
     >
@@ -176,7 +176,7 @@ const LoginPage = () => {
         ))}
 
         <div className="relative z-10 mx-auto flex min-h-[calc(100vh-8rem)] max-w-md items-center justify-center lg:min-h-[calc(100vh-9rem)]">
-          <section className="w-full rounded-lg border border-[#E7DDBF] bg-white/95 p-6 shadow-2xl shadow-black/10 backdrop-blur-sm transition-colors duration-300 dark:border-[#3A3425] dark:bg-[#1F1D1A]/95 dark:shadow-black/40 sm:p-8">
+          <section className="w-full rounded-lg border border-[#E7DDBF] bg-white/95 p-6 shadow-2xl shadow-black/10 backdrop-blur-sm transition-colors duration-300 dark:border-[#3A3E46] dark:bg-[#202329]/95 dark:shadow-black/40 sm:p-8">
             <div className="mb-7 text-center">
               <h1 className="text-3xl font-bold text-[#222222] dark:text-[#F7F2E8]">Benefit-Bar</h1>
               <p className="mx-auto mt-2 text-sm text-[#5E5A52] dark:text-[#C8C0B1]">
@@ -194,11 +194,11 @@ const LoginPage = () => {
             )}
 
             <Tabs defaultValue="login" className="w-full" onValueChange={clearMessages}>
-              <TabsList className="mb-6 grid w-full grid-cols-2 rounded-lg bg-[#F4F1EA] p-1 dark:bg-[#2A2721]">
-                <TabsTrigger value="login" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[#222222] dark:text-[#F7F2E8] dark:data-[state=active]:bg-[#3A3425] dark:data-[state=active]:text-white">
+              <TabsList className="mb-6 grid w-full grid-cols-2 rounded-lg bg-[#F4F1EA] p-1 dark:bg-[#2B2F36]">
+                <TabsTrigger value="login" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[#222222] dark:text-[#F7F2E8] dark:data-[state=active]:bg-[#3A3E46] dark:data-[state=active]:text-white">
                   Einloggen
                 </TabsTrigger>
-                <TabsTrigger value="signup" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[#222222] dark:text-[#F7F2E8] dark:data-[state=active]:bg-[#3A3425] dark:data-[state=active]:text-white">
+                <TabsTrigger value="signup" className="rounded-md data-[state=active]:bg-white data-[state=active]:text-[#222222] dark:text-[#F7F2E8] dark:data-[state=active]:bg-[#3A3E46] dark:data-[state=active]:text-white">
                   Zugang anfordern
                 </TabsTrigger>
               </TabsList>
@@ -215,7 +215,7 @@ const LoginPage = () => {
                         if (errorMsg) setErrorMsg(null);
                       }}
                       placeholder="vorname.nachname@eduscho.at"
-                      className="border-[#D7C99F] bg-white text-[#222222] placeholder:text-[#8B8578] focus:border-[#C0A468] dark:border-[#514733] dark:bg-[#151412] dark:text-[#F7F2E8] dark:placeholder:text-[#8A8376]"
+                      className="border-[#D7C99F] bg-white text-[#222222] placeholder:text-[#8B8578] focus:border-[#C0A468] dark:border-[#454A53] dark:bg-[#181B20] dark:text-[#F7F2E8] dark:placeholder:text-[#9BA1AA]"
                     />
                   </div>
 
@@ -235,12 +235,12 @@ const LoginPage = () => {
                           if (errorMsg) setErrorMsg(null);
                         }}
                         placeholder="Passwort"
-                        className="border-[#D7C99F] bg-white pr-11 text-[#222222] placeholder:text-[#8B8578] focus:border-[#C0A468] dark:border-[#514733] dark:bg-[#151412] dark:text-[#F7F2E8] dark:placeholder:text-[#8A8376]"
+                        className="border-[#D7C99F] bg-white pr-11 text-[#222222] placeholder:text-[#8B8578] focus:border-[#C0A468] dark:border-[#454A53] dark:bg-[#181B20] dark:text-[#F7F2E8] dark:placeholder:text-[#9BA1AA]"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword((value) => !value)}
-                        className="absolute inset-y-0 right-3 flex items-center text-[#8B7138] transition-colors hover:text-[#222222] focus:outline-none focus:ring-2 focus:ring-[#C0A468] focus:ring-offset-2 focus:ring-offset-white dark:text-[#D4B978] dark:hover:text-white dark:focus:ring-offset-[#1F1D1A]"
+                        className="absolute inset-y-0 right-3 flex items-center text-[#8B7138] transition-colors hover:text-[#222222] focus:outline-none focus:ring-2 focus:ring-[#C0A468] focus:ring-offset-2 focus:ring-offset-white dark:text-[#D4B978] dark:hover:text-white dark:focus:ring-offset-[#202329]"
                         aria-label={showPassword ? 'Passwort verbergen' : 'Passwort anzeigen'}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -253,7 +253,7 @@ const LoginPage = () => {
                     disabled={Boolean(loadingAction)}
                     className="w-full bg-[#C0A468] text-white shadow-md shadow-[#C0A468]/20 hover:bg-[#A98D52] dark:bg-[#B99A56] dark:text-white dark:hover:bg-[#C0A468]"
                   >
-                    {loadingAction === 'login' ? 'Anmeldung läuft ...' : 'Einloggen'}
+                    {loadingAction === 'login' ? 'Anmeldung läuft …' : 'Einloggen'}
                   </Button>
                 </form>
 
@@ -272,7 +272,7 @@ const LoginPage = () => {
                         if (successMsg) setSuccessMsg(null);
                       }}
                       placeholder="vorname.nachname@eduscho.at"
-                      className="border-[#D7C99F] bg-white text-[#222222] placeholder:text-[#8B8578] focus:border-[#C0A468] dark:border-[#514733] dark:bg-[#151412] dark:text-[#F7F2E8] dark:placeholder:text-[#8A8376]"
+                      className="border-[#D7C99F] bg-white text-[#222222] placeholder:text-[#8B8578] focus:border-[#C0A468] dark:border-[#454A53] dark:bg-[#181B20] dark:text-[#F7F2E8] dark:placeholder:text-[#9BA1AA]"
                     />
                   </div>
                   <Button
@@ -280,7 +280,7 @@ const LoginPage = () => {
                     disabled={Boolean(loadingAction)}
                     className="w-full bg-[#C0A468] text-white shadow-md shadow-[#C0A468]/20 hover:bg-[#A98D52] dark:bg-[#B99A56] dark:text-white dark:hover:bg-[#C0A468]"
                   >
-                    {loadingAction === 'signup' ? 'Zugang wird geprüft ...' : 'Zugang anfordern'}
+                    {loadingAction === 'signup' ? 'Zugang wird geprüft …' : 'Zugang anfordern'}
                   </Button>
                 </form>
               </TabsContent>

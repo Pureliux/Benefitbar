@@ -128,7 +128,7 @@ const SubmissionPage = () => {
       <>
         <Header />
         <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-background">
-          <div className="text-foreground">Lädt...</div>
+          <div className="text-foreground">Lädt …</div>
         </main>
       </>
     );
@@ -238,7 +238,7 @@ const SubmissionPage = () => {
                           {!isLocked && (
                             <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md bg-muted px-4 py-3 text-sm font-medium transition hover:bg-muted/80">
                               <Upload className="h-4 w-4" />
-                              {uploadingId === item.id ? 'Lädt hoch...' : 'Nachweis hochladen'}
+                              {uploadingId === item.id ? 'Lädt hoch …' : 'Nachweis hochladen'}
                               <input
                                 type="file"
                                 accept=".pdf,.jpg,.jpeg,.png,.docx"
@@ -288,7 +288,7 @@ const SubmissionPage = () => {
                   className="bg-[#C0A468] text-white hover:bg-[#A98D52]"
                 >
                   <Send className="mr-2 h-4 w-4" />
-                  {submitting ? 'Wird eingereicht...' : 'Final einreichen'}
+                  {submitting ? 'Wird eingereicht …' : 'Final einreichen'}
                 </Button>
               </div>
             </section>

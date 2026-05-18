@@ -9,7 +9,7 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   if (initialLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground text-lg">Lädt...</div>
+        <div className="text-foreground text-lg">Lädt …</div>
       </div>
     );
   }

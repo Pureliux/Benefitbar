@@ -55,35 +55,35 @@ html {
   }
 
   .dark {
-    /* Softer internal dark mode */
-    --background: 38 12% 18%;
-    --foreground: 43 33% 94%;
-    --card: 36 13% 22%;
-    --card-foreground: 43 33% 94%;
-    --popover: 36 13% 22%;
-    --popover-foreground: 43 33% 94%;
+    /* Neutral internal dark mode */
+    --background: 220 10% 10%;
+    --foreground: 0 0% 94%;
+    --card: 220 9% 15%;
+    --card-foreground: 0 0% 94%;
+    --popover: 220 9% 15%;
+    --popover-foreground: 0 0% 94%;
     --primary: 41 42% 58%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 37 11% 27%;
-    --secondary-foreground: 43 33% 94%;
-    --muted: 37 11% 27%;
-    --muted-foreground: 42 18% 73%;
-    --accent: 37 11% 27%;
-    --accent-foreground: 43 33% 94%;
+    --secondary: 220 8% 20%;
+    --secondary-foreground: 0 0% 94%;
+    --muted: 220 8% 20%;
+    --muted-foreground: 220 5% 68%;
+    --accent: 220 8% 20%;
+    --accent-foreground: 0 0% 94%;
     --destructive: 359 79% 62%;
     --destructive-foreground: 0 0% 100%;
     --success: 116 20% 52%;
     --success-foreground: 0 0% 100%;
-    --border: 38 12% 31%;
-    --input: 38 12% 31%;
+    --border: 220 8% 25%;
+    --input: 220 8% 25%;
     --ring: 41 42% 58%;
-    --sidebar-background: 36 13% 22%;
-    --sidebar-foreground: 43 33% 94%;
+    --sidebar-background: 220 9% 15%;
+    --sidebar-foreground: 0 0% 94%;
     --sidebar-primary: 41 42% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 37 11% 27%;
-    --sidebar-accent-foreground: 43 33% 94%;
-    --sidebar-border: 38 12% 31%;
+    --sidebar-accent: 220 8% 20%;
+    --sidebar-accent-foreground: 0 0% 94%;
+    --sidebar-border: 220 8% 25%;
     --sidebar-ring: 41 42% 58%;
   }
 }
@@ -128,30 +128,24 @@ html {
     isolation: isolate;
     background-color: #F4F1EA;
     background-image:
-      url("/brand/tchibo-mark-watermark.png"),
-      url("/brand/tchibo-mark-watermark.png"),
-      radial-gradient(circle, rgba(34, 34, 34, 0.045) 0.7px, transparent 0.8px),
-      radial-gradient(circle at 18% 18%, rgba(237, 211, 142, 0.38), transparent 28rem),
-      radial-gradient(circle at 80% 20%, rgba(192, 164, 104, 0.2), transparent 26rem),
-      radial-gradient(circle at 58% 88%, rgba(113, 156, 111, 0.12), transparent 24rem),
-      linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(244, 241, 234, 0.92));
-    background-position: left 7vw top 8rem, right 8vw bottom 6rem, 0 0, center, center, center, center;
-    background-repeat: no-repeat, no-repeat, repeat, no-repeat, no-repeat, no-repeat, no-repeat;
-    background-size: 8.5rem auto, 13rem auto, 1.15rem 1.15rem, auto, auto, auto, auto;
+      linear-gradient(rgba(192, 164, 104, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(192, 164, 104, 0.07) 1px, transparent 1px),
+      linear-gradient(125deg, rgba(255, 255, 255, 0.9) 0%, rgba(244, 241, 234, 0.94) 42%, rgba(237, 211, 142, 0.24) 100%),
+      linear-gradient(18deg, transparent 0%, rgba(113, 156, 111, 0.08) 52%, transparent 100%);
+    background-position: center;
+    background-repeat: repeat, repeat, no-repeat, no-repeat;
+    background-size: 4.5rem 4.5rem, 4.5rem 4.5rem, auto, auto;
   }
 
   .dark .benefit-ambient-bg {
-    background-color: #2B2925;
+    background-color: #15171A;
     background-image:
-      url("/brand/tchibo-mark-watermark.png"),
-      url("/brand/tchibo-mark-watermark.png"),
-      radial-gradient(circle, rgba(255, 255, 255, 0.052) 0.7px, transparent 0.8px),
-      radial-gradient(circle at 18% 18%, rgba(192, 164, 104, 0.18), transparent 28rem),
-      radial-gradient(circle at 78% 18%, rgba(237, 211, 142, 0.1), transparent 24rem),
-      radial-gradient(circle at 58% 88%, rgba(113, 156, 111, 0.12), transparent 24rem),
-      linear-gradient(135deg, rgba(58, 53, 45, 0.96), rgba(43, 41, 37, 0.98));
-    background-position: left 7vw top 8rem, right 8vw bottom 6rem, 0 0, center, center, center, center;
-    background-repeat: no-repeat, no-repeat, repeat, no-repeat, no-repeat, no-repeat, no-repeat;
-    background-size: 8.5rem auto, 13rem auto, 1.15rem 1.15rem, auto, auto, auto, auto;
+      linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+      linear-gradient(125deg, rgba(31, 34, 39, 0.98) 0%, rgba(21, 23, 26, 0.98) 54%, rgba(42, 47, 54, 0.96) 100%),
+      linear-gradient(18deg, transparent 0%, rgba(192, 164, 104, 0.08) 54%, transparent 100%);
+    background-position: center;
+    background-repeat: repeat, repeat, no-repeat, no-repeat;
+    background-size: 4.5rem 4.5rem, 4.5rem 4.5rem, auto, auto;
   }
 }

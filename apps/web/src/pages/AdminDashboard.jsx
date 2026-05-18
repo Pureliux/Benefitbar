@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Users, Server, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Users, Server, CheckCircle2, ShieldAlert, KeyRound, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import ErrorAlert from '@/components/ErrorAlert.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -33,6 +34,11 @@ const AdminDashboard = () => {
     isAdmin: false
   });
   const [isCreating, setIsCreating] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [editPassword, setEditPassword] = useState('');
+  const [editPasswordConfirm, setEditPasswordConfirm] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
 
   useEffect(() => {
     fetchAllData();
@@ -58,6 +64,25 @@ const AdminDashboard = () => {
     setSuccessMsg(null);
   };
 
+  const closeEmployeeDialog = () => {
+    setSelectedEmployee(null);
+    setEditPassword('');
+    setEditPasswordConfirm('');
+  };
+
+  const validatePassword = (password, confirmPassword) => {
+    if (!password || !confirmPassword) {
+      return 'Passwort fehlt.';
+    }
+    if (password.length < 10 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      return 'Passwort erfüllt nicht die Anforderungen (min. 10 Zeichen, Großbuchstabe, Kleinbuchstabe, Zahl).';
+    }
+    if (password !== confirmPassword) {
+      return 'Passwörter stimmen nicht überein.';
+    }
+    return null;
+  };
+
   const validateUserForm = () => {
     if (!newUser.password || !newUser.confirmPassword) {
       return 'Passwort fehlt.';
@@ -68,13 +93,7 @@ const AdminDashboard = () => {
     if (!newUser.email.toLowerCase().endsWith('@eduscho.at')) {
       return 'E-Mail-Adresse ist ungültig.';
     }
-    if (newUser.password.length < 10 || !/[A-Z]/.test(newUser.password) || !/[a-z]/.test(newUser.password) || !/[0-9]/.test(newUser.password)) {
-      return 'Passwort erfüllt nicht die Anforderungen (min. 10 Zeichen, Großbuchstabe, Kleinbuchstabe, Zahl).';
-    }
-    if (newUser.password !== newUser.confirmPassword) {
-      return 'Passwörter stimmen nicht überein.';
-    }
-    return null;
+    return validatePassword(newUser.password, newUser.confirmPassword);
   };
 
   const handleCreateUser = async (e) => {
@@ -100,6 +119,69 @@ const AdminDashboard = () => {
     setIsCreating(false);
   };
 
+  const handleUpdatePassword = async () => {
+    clearMessages();
+    if (!selectedEmployee) return;
+
+    const validationError = validatePassword(editPassword, editPasswordConfirm);
+    if (validationError) {
+      setErrorMsg(validationError);
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const res = await apiServerClient.fetch('/admin/update-user-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedEmployee.id,
+          password: editPassword,
+          passwordConfirm: editPasswordConfirm,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || data.message || 'Passwort konnte nicht geändert werden.');
+      }
+      setSuccessMsg(data.message || 'Passwort wurde geändert.');
+      setEditPassword('');
+      setEditPasswordConfirm('');
+      await fetchAllData();
+    } catch (err) {
+      setErrorMsg(err.message || 'Passwort konnte nicht geändert werden.');
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    clearMessages();
+    if (!selectedEmployee) return;
+    const confirmed = window.confirm(`User ${selectedEmployee.email} wirklich löschen?`);
+    if (!confirmed) return;
+
+    setIsDeletingUser(true);
+    try {
+      const res = await apiServerClient.fetch('/admin/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: selectedEmployee.id }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || data.message || 'User konnte nicht gelöscht werden.');
+      }
+      setSuccessMsg(data.message || 'User wurde gelöscht.');
+      closeEmployeeDialog();
+      await fetchAllData();
+    } catch (err) {
+      setErrorMsg(err.message || 'User konnte nicht gelöscht werden.');
+    } finally {
+      setIsDeletingUser(false);
+    }
+  };
+
   const filteredEmployees = employees.filter(emp =>
     emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (emp.firstName && emp.firstName.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -110,8 +192,8 @@ const AdminDashboard = () => {
     return (
       <>
         <Header />
-        <div className="min-h-[calc(100vh-4rem)] bg-background flex items-center justify-center">
-          <div className="text-foreground text-lg">Lädt...</div>
+        <div className="benefit-ambient-bg flex min-h-[calc(100vh-4rem)] items-center justify-center">
+          <div className="text-lg text-foreground">Lädt …</div>
         </div>
       </>
     );
@@ -125,7 +207,7 @@ const AdminDashboard = () => {
 
       <Header />
 
-      <div className="min-h-[calc(100vh-4rem)] bg-background py-8 transition-colors duration-200">
+      <div className="benefit-ambient-bg min-h-[calc(100vh-4rem)] py-8 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
@@ -162,7 +244,7 @@ const AdminDashboard = () => {
                   <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
                     <h2 className="text-xl font-semibold text-card-foreground">Mitarbeitende</h2>
                     <Input
-                      placeholder="Suche..."
+                      placeholder="Suche …"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="max-w-xs bg-background text-foreground border-border focus:border-primary"
@@ -176,11 +258,21 @@ const AdminDashboard = () => {
                           <th className="py-3 px-4 font-semibold">Name & E-Mail</th>
                           <th className="py-3 px-4 font-semibold">Status / Auth</th>
                           <th className="py-3 px-4 font-semibold">Details</th>
+                          <th className="py-3 px-4 font-semibold">Aktion</th>
                         </tr>
                       </thead>
                       <tbody className="bg-card text-card-foreground">
                         {filteredEmployees.map((emp) => (
-                          <tr key={emp.id} className="border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors">
+                          <tr
+                            key={emp.id}
+                            onClick={() => {
+                              clearMessages();
+                              setSelectedEmployee(emp);
+                              setEditPassword('');
+                              setEditPasswordConfirm('');
+                            }}
+                            className="cursor-pointer border-b border-border transition-colors last:border-b-0 hover:bg-muted/40"
+                          >
                             <td className="py-4 px-4">
                               <div className="font-medium text-foreground flex items-center gap-2">
                                 {emp.firstName} {emp.lastName} 
@@ -210,10 +302,15 @@ const AdminDashboard = () => {
                               <div><span className="font-medium text-foreground">Letzter Login:</span> {emp.lastLoginAt ? format(new Date(emp.lastLoginAt), 'dd.MM.yyyy HH:mm') : 'nie'}</div>
                               <div><span className="font-medium text-foreground">Admin:</span> {emp.isAdmin ? 'Ja' : 'Nein'}</div>
                             </td>
+                            <td className="py-4 px-4">
+                              <Button type="button" variant="outline" size="sm" className="text-foreground">
+                                Bearbeiten
+                              </Button>
+                            </td>
                           </tr>
                         ))}
                         {filteredEmployees.length === 0 && (
-                          <tr><td colSpan="3" className="py-6 text-center text-muted-foreground">Keine Mitarbeitenden gefunden.</td></tr>
+                          <tr><td colSpan="4" className="py-6 text-center text-muted-foreground">Keine Mitarbeitenden gefunden.</td></tr>
                         )}
                       </tbody>
                     </table>
@@ -306,6 +403,75 @@ const AdminDashboard = () => {
           </Tabs>
         </div>
       </div>
+
+      <Dialog open={Boolean(selectedEmployee)} onOpenChange={(open) => { if (!open) closeEmployeeDialog(); }}>
+        <DialogContent className="border-border bg-card text-card-foreground sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>User bearbeiten</DialogTitle>
+            <DialogDescription>
+              {selectedEmployee ? `${selectedEmployee.firstName || ''} ${selectedEmployee.lastName || ''}`.trim() || selectedEmployee.email : ''}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedEmployee && (
+            <div className="space-y-6">
+              <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm">
+                <div className="font-semibold text-foreground">{selectedEmployee.email}</div>
+                <div className="mt-2 grid gap-2 text-muted-foreground sm:grid-cols-2">
+                  <div>Status: {selectedEmployee.status || '-'}</div>
+                  <div>Auth: {selectedEmployee.authStatus || '-'}</div>
+                  <div>Passwort gesetzt: {selectedEmployee.passwordSet ? 'Ja' : 'Nein'}</div>
+                  <div>Admin: {selectedEmployee.isAdmin ? 'Ja' : 'Nein'}</div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 font-semibold text-foreground">
+                  <KeyRound className="h-4 w-4 text-primary" />
+                  Passwort ändern
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Input
+                    type="password"
+                    placeholder="Neues Passwort"
+                    value={editPassword}
+                    onChange={(event) => { setEditPassword(event.target.value); clearMessages(); }}
+                    className="bg-background"
+                  />
+                  <Input
+                    type="password"
+                    placeholder="Passwort bestätigen"
+                    value={editPasswordConfirm}
+                    onChange={(event) => { setEditPasswordConfirm(event.target.value); clearMessages(); }}
+                    className="bg-background"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Mindestens 10 Zeichen, ein Großbuchstabe, ein Kleinbuchstabe und eine Zahl.</p>
+                <Button onClick={handleUpdatePassword} disabled={isUpdatingPassword} className="w-full sm:w-auto">
+                  {isUpdatingPassword ? 'Passwort wird geändert …' : 'Passwort speichern'}
+                </Button>
+              </div>
+
+              <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-4">
+                <div className="flex items-start gap-3">
+                  <Trash2 className="mt-0.5 h-4 w-4 text-destructive" />
+                  <div className="flex-1">
+                    <p className="font-semibold text-destructive">User löschen</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Der Zugang wird aus der Benutzerliste entfernt. Diese Aktion kann nicht rückgängig gemacht werden.</p>
+                  </div>
+                </div>
+                <Button onClick={handleDeleteUser} disabled={isDeletingUser} variant="destructive" className="mt-4">
+                  {isDeletingUser ? 'User wird gelöscht …' : 'User löschen'}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeEmployeeDialog}>Schließen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

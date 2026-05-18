@@ -91,7 +91,7 @@ const DashboardPage = () => {
       <>
         <Header />
         <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-background">
-          <div className="text-foreground">Lädt...</div>
+          <div className="text-foreground">Lädt …</div>
         </main>
       </>
     );

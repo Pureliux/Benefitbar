@@ -171,7 +171,7 @@ const BenefitSelectionPage = () => {
       <>
         <Header />
         <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-background">
-          <div className="text-foreground">Lädt...</div>
+          <div className="text-foreground">Lädt …</div>
         </main>
       </>
     );
@@ -294,7 +294,7 @@ const BenefitSelectionPage = () => {
                         disabled={!editable || savingId === benefit.id}
                         className="w-full bg-[#C0A468] text-white hover:bg-[#A98D52]"
                       >
-                        {savingId === benefit.id ? 'Wird gespeichert...' : 'Benefit auswählen'}
+                        {savingId === benefit.id ? 'Wird gespeichert …' : 'Benefit auswählen'}
                       </Button>
                     )}
                   </article>
@@ -322,7 +322,7 @@ const BenefitSelectionPage = () => {
                     <Textarea
                       value={customBenefit.description}
                       onChange={(event) => setCustomBenefit({ ...customBenefit, description: event.target.value })}
-                      placeholder="Kurz begründen..."
+                      placeholder="Kurz begründen …"
                       rows={1}
                       className="min-h-9 resize-none bg-background"
                     />
@@ -367,7 +367,7 @@ const BenefitSelectionPage = () => {
                     className="mt-4 bg-[#23211D] text-white hover:bg-[#38342D] dark:bg-[#C0A468]"
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    {savingId === 'custom' ? 'Wird gespeichert...' : 'Eigenen Benefit hinzufügen'}
+                    {savingId === 'custom' ? 'Wird gespeichert …' : 'Eigenen Benefit hinzufügen'}
                   </Button>
                 </article>
               )}

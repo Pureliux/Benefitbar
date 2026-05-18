@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-email-only-v4';
+const BENEFITBAR_API_VERSION = '2026-05-18-admin-tools-v6';
 
 header('X-Content-Type-Options: nosniff');
 
@@ -309,7 +309,7 @@ function seed_benefit_data(PDO $pdo): void
     $countStmt->execute([$benefitYearId]);
     if ((int)($countStmt->fetch()['count'] ?? 0) > 0) {
         $updates = [
-            ['Wiener Öffi-Ticket', 'Zuschuss für öffentliche Verkehrsmittel und nachhaltige Mobilität.', 'Mobilität', 'Wiener Oeffi-Ticket'],
+            ['Wiener Öffi-Ticket', 'Zuschuss für öffentliche Verkehrsmittel und nachhaltige Mobilität.', 'Mobilität', 'Wiener Öffi-Ticket'],
             ['Essens-/Verpflegungszuschuss', 'Unterstützung für Mahlzeiten und gesunde Ernährung.', 'Ernährung', 'Essens-/Verpflegungszuschuss'],
             ['Homeoffice-Ausstattung', 'Arbeitsmittel für einen guten Arbeitsplatz zuhause.', 'Arbeitsplatz', 'Homeoffice-Ausstattung'],
         ];
@@ -1450,6 +1450,94 @@ function handle_admin_create_user(): void
     json_response(['success' => true, 'message' => 'User wurde erstellt und kann sich jetzt einloggen.']);
 }
 
+function handle_admin_update_user_password(): void
+{
+    $admin = require_admin();
+    $body = request_json();
+    $userId = (int)($body['userId'] ?? $body['id'] ?? 0);
+    $password = (string)($body['password'] ?? '');
+    $confirm = (string)($body['passwordConfirm'] ?? $body['confirmPassword'] ?? '');
+
+    if ($userId <= 0) {
+        json_response(['success' => false, 'error' => 'User nicht gefunden.', 'errorCode' => 'user_not_found'], 404);
+    }
+    if (!$password || !$confirm) {
+        json_response(['success' => false, 'error' => 'Passwort fehlt.', 'errorCode' => 'missing_password'], 400);
+    }
+    if ($password !== $confirm) {
+        json_response(['success' => false, 'error' => 'Passwörter stimmen nicht überein.', 'errorCode' => 'password_mismatch'], 400);
+    }
+    $policyError = validate_password_policy($password);
+    if ($policyError) {
+        json_response(['success' => false, 'error' => $policyError, 'errorCode' => 'invalid_password_policy'], 400);
+    }
+
+    $user = find_user_by_id($userId);
+    if (!$user) {
+        json_response(['success' => false, 'error' => 'User nicht gefunden.', 'errorCode' => 'user_not_found'], 404);
+    }
+
+    $now = now_sql();
+    db()->prepare("
+        UPDATE bb_users
+        SET password_hash = ?, password_set_at = ?, auth_status = 'active', login_method = 'email_password', updated_at = ?
+        WHERE id = ?
+    ")->execute([password_hash($password, PASSWORD_DEFAULT), $now, $now, $userId]);
+
+    log_auth('admin_user_password_changed', $user['email'], 'success', null, 'changed_by=' . $admin['email']);
+    json_response(['success' => true, 'message' => 'Passwort wurde geändert.', 'user' => safe_user(find_user_by_id($userId))]);
+}
+
+function handle_admin_delete_user(): void
+{
+    $admin = require_admin();
+    $body = request_json();
+    $userId = (int)($body['userId'] ?? $body['id'] ?? 0);
+
+    if ($userId <= 0) {
+        json_response(['success' => false, 'error' => 'User nicht gefunden.', 'errorCode' => 'user_not_found'], 404);
+    }
+    if ((int)$admin['id'] === $userId) {
+        json_response(['success' => false, 'error' => 'Du kannst deinen eigenen Admin-User nicht löschen.', 'errorCode' => 'cannot_delete_self'], 400);
+    }
+
+    $user = find_user_by_id($userId);
+    if (!$user) {
+        json_response(['success' => false, 'error' => 'User nicht gefunden.', 'errorCode' => 'user_not_found'], 404);
+    }
+
+    $pdo = db();
+    try {
+        $pdo->beginTransaction();
+        $pdo->prepare('
+            DELETE FROM bb_attachments
+            WHERE user_id = ?
+               OR selected_benefit_id IN (
+                    SELECT sb.id
+                    FROM bb_selected_benefits sb
+                    INNER JOIN bb_submissions s ON s.id = sb.submission_id
+                    WHERE s.user_id = ?
+               )
+        ')->execute([$userId, $userId]);
+        $pdo->prepare('
+            DELETE FROM bb_selected_benefits
+            WHERE submission_id IN (SELECT id FROM bb_submissions WHERE user_id = ?)
+        ')->execute([$userId]);
+        $pdo->prepare('DELETE FROM bb_submissions WHERE user_id = ?')->execute([$userId]);
+        $pdo->prepare('DELETE FROM bb_users WHERE id = ?')->execute([$userId]);
+        $pdo->commit();
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        log_auth('admin_user_delete_failed', $user['email'], 'failed', 'technical_error', $error->getMessage());
+        json_response(['success' => false, 'error' => 'User konnte nicht gelöscht werden.', 'errorCode' => 'delete_failed'], 500);
+    }
+
+    log_auth('admin_user_deleted', $user['email'], 'success', null, 'deleted_by=' . $admin['email']);
+    json_response(['success' => true, 'message' => 'User wurde gelöscht.']);
+}
+
 function handle_admin_send_test_email(): void
 {
     require_admin();
@@ -1593,6 +1681,8 @@ try {
         json_response(['success' => true, 'users' => array_map('safe_user', $stmt->fetchAll())]);
     }
     if ($method === 'POST' && $path === '/admin/create-user') handle_admin_create_user();
+    if ($method === 'POST' && $path === '/admin/update-user-password') handle_admin_update_user_password();
+    if ($method === 'POST' && $path === '/admin/delete-user') handle_admin_delete_user();
     if ($method === 'POST' && $path === '/admin/send-test-email') handle_admin_send_test_email();
     if ($method === 'POST' && $path === '/admin/test-login') handle_admin_test_login();
     if ($method === 'POST' && $path === '/admin/resend-activation-link') {

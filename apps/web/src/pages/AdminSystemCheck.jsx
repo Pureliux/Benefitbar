@@ -5,7 +5,7 @@ import Header from '@/components/Header.jsx';
 import apiServerClient from '@/lib/apiServerClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Mail, ShieldAlert, CheckCircle2, XCircle, Database } from 'lucide-react';
+import { Mail, ShieldAlert, CheckCircle2, XCircle, Database, Server } from 'lucide-react';
 import { format } from 'date-fns';
 import ErrorAlert from '@/components/ErrorAlert.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -28,6 +28,12 @@ const AdminSystemCheck = () => {
   
   const [showAuthLogs, setShowAuthLogs] = useState(false);
   const [showEmailLogs, setShowEmailLogs] = useState(false);
+
+  const formatDateTime = (value) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '-' : format(date, 'dd.MM.yyyy HH:mm');
+  };
 
   useEffect(() => {
     fetchStats();
@@ -152,8 +158,8 @@ const AdminSystemCheck = () => {
     return (
       <>
         <Header />
-        <div className="min-h-[calc(100vh-4rem)] bg-background flex items-center justify-center">
-          <div className="text-foreground text-lg">System Check wird geladen...</div>
+        <div className="benefit-ambient-bg flex min-h-[calc(100vh-4rem)] items-center justify-center">
+          <div className="text-lg text-foreground">System-Check wird geladen …</div>
         </div>
       </>
     );
@@ -171,7 +177,7 @@ const AdminSystemCheck = () => {
 
       <Header />
 
-      <div className="min-h-[calc(100vh-4rem)] bg-background py-8 transition-colors duration-200">
+      <div className="benefit-ambient-bg min-h-[calc(100vh-4rem)] py-8 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-4 mb-8">
             <Server className="h-8 w-8 text-primary" />
@@ -221,15 +227,15 @@ const AdminSystemCheck = () => {
                 <h3 className="text-lg font-semibold text-card-foreground mt-8 mb-4">Nutzer-Statistiken</h3>
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div className="p-4 bg-muted/40 rounded-xl border border-border">
-                    <p className="text-3xl font-bold text-foreground mb-1">{stats.activeUserCount}</p>
+                    <p className="text-3xl font-bold text-foreground mb-1">{stats.activeUserCount ?? 0}</p>
                     <p className="text-xs text-muted-foreground">Aktive User</p>
                   </div>
                   <div className="p-4 bg-muted/40 rounded-xl border border-border">
-                    <p className="text-3xl font-bold text-foreground mb-1">{stats.usersWithPassword}</p>
+                    <p className="text-3xl font-bold text-foreground mb-1">{stats.usersWithPassword ?? 0}</p>
                     <p className="text-xs text-muted-foreground">Mit Passwort</p>
                   </div>
                   <div className="p-4 bg-muted/40 rounded-xl border border-border">
-                    <p className="text-3xl font-bold text-foreground mb-1">{stats.usersWithoutPassword}</p>
+                    <p className="text-3xl font-bold text-foreground mb-1">{stats.usersWithoutPassword ?? 0}</p>
                     <p className="text-xs text-muted-foreground">Ohne passwordHash</p>
                   </div>
                 </div>
@@ -249,7 +255,7 @@ const AdminSystemCheck = () => {
                         className="bg-background"
                       />
                       <Button onClick={handleSendTestEmail} disabled={isSendingTest} className="shrink-0 bg-primary hover:bg-primary/90">
-                        {isSendingTest ? 'Senden...' : 'Senden'}
+                        {isSendingTest ? 'Senden …' : 'Senden'}
                       </Button>
                     </div>
                   </div>
@@ -264,7 +270,7 @@ const AdminSystemCheck = () => {
                         className="bg-background"
                       />
                       <Button onClick={handleResendActivation} disabled={isResending} className="shrink-0 bg-primary hover:bg-primary/90">
-                        {isResending ? 'Senden...' : 'Senden'}
+                        {isResending ? 'Senden …' : 'Senden'}
                       </Button>
                     </div>
                   </div>
@@ -287,10 +293,10 @@ const AdminSystemCheck = () => {
                       />
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <Button onClick={handleCreateTestUser} disabled={isCreatingTest} variant="outline" className="w-full text-foreground border-border hover:bg-muted">
-                          {isCreatingTest ? 'Wird erstellt...' : 'Test-User erstellen'}
+                          {isCreatingTest ? 'Wird erstellt …' : 'Test-User erstellen'}
                         </Button>
                         <Button onClick={handleTestLogin} disabled={isCheckingLogin} variant="outline" className="w-full text-foreground border-border hover:bg-muted">
-                          {isCheckingLogin ? 'Wird geprüft...' : 'Test-Login prüfen'}
+                          {isCheckingLogin ? 'Wird geprüft …' : 'Test-Login prüfen'}
                         </Button>
                       </div>
                     </div>
@@ -324,7 +330,7 @@ const AdminSystemCheck = () => {
                   <tbody className="text-foreground">
                     {stats.recentLoginErrors.map((log, i) => (
                       <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/30">
-                        <td className="py-3 px-4 text-muted-foreground whitespace-nowrap">{format(new Date(log.timestamp), 'dd.MM.yyyy HH:mm')}</td>
+                        <td className="py-3 px-4 text-muted-foreground whitespace-nowrap">{formatDateTime(log.timestamp)}</td>
                         <td className="py-3 px-4">{log.email}</td>
                         <td className="py-3 px-4 font-mono text-destructive bg-destructive/10 px-2 py-1 rounded inline-block my-2 ml-4">{log.errorCode || 'unknown'}</td>
                       </tr>
@@ -353,7 +359,7 @@ const AdminSystemCheck = () => {
                   <tbody className="text-foreground">
                     {stats.recentEmailErrors.map((log, i) => (
                       <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/30">
-                        <td className="py-3 px-4 text-muted-foreground whitespace-nowrap">{format(new Date(log.sentAt), 'dd.MM.yyyy HH:mm')}</td>
+                        <td className="py-3 px-4 text-muted-foreground whitespace-nowrap">{formatDateTime(log.sentAt)}</td>
                         <td className="py-3 px-4">{log.recipient}</td>
                         <td className="py-3 px-4 text-destructive">{log.errorMessage || 'Unbekannt'}</td>
                       </tr>

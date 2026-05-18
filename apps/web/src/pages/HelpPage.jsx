@@ -6,35 +6,27 @@ import Header from '@/components/Header.jsx';
 const faqs = [
   {
     question: 'Was ist die Benefit-Bar?',
-    answer: 'Die Benefit-Bar ist das interne Programm, mit dem du dein jährliches Benefit-Budget für passende Angebote nutzen kannst.',
+    answer: 'Placeholder',
   },
   {
     question: 'Wie hoch ist mein Budget?',
-    answer: 'Das Standardbudget beträgt 1.000 EUR pro Benefit-Jahr. Abweichungen können durch HR/Prozessmanagement im Admin-Bereich gepflegt werden.',
+    answer: 'Placeholder',
   },
   {
     question: 'Was passiert, wenn ich mehr als mein Budget auswähle?',
-    answer: 'Die App zeigt dir sofort den Unternehmensanteil und einen möglichen Eigenanteil. Vor der finalen Einreichung musst du den Eigenanteil aktiv bestätigen.',
+    answer: 'Placeholder',
   },
   {
     question: 'Wie reiche ich einen eigenen Benefit ein?',
-    answer: 'Unter "Benefits auswählen" findest du die Kachel "Eigenen Benefit vorschlagen". Eigene Benefits werden als in Prüfung markiert und durch HR bewertet.',
+    answer: 'Placeholder',
   },
   {
     question: 'Welche Nachweise kann ich hochladen?',
-    answer: 'Unterstützt werden PDF, JPG, PNG und DOCX. Wenn für einen Benefit ein Nachweis notwendig ist, wird das im Status deutlich angezeigt.',
+    answer: 'Placeholder',
   },
   {
     question: 'Kann ich meine Auswahl noch ändern?',
-    answer: 'Solange deine Einreichung ein Entwurf ist oder Unterlagen fehlen, kannst du sie bearbeiten. Nach der finalen Einreichung ist die Auswahl gesperrt.',
-  },
-  {
-    question: 'Was bedeutet monatliche Auszahlung?',
-    answer: 'Einige Benefits werden über 12 Monate verteilt ausgewiesen. Die Budgetberechnung zeigt dir den Gesamtbetrag und den monatlichen Anteil.',
-  },
-  {
-    question: 'Wann wird meine Einreichung bearbeitet?',
-    answer: 'Nach der finalen Einreichung liegt dein Antrag bei HR/Prozessmanagement. Den Bearbeitungsstand findest du jederzeit im Reiter Status.',
+    answer: 'Placeholder',
   },
 ];
 
@@ -52,20 +44,20 @@ const HelpPage = () => {
 
       <main className="benefit-ambient-bg min-h-[calc(100vh-4rem)] py-8 text-[#222222] transition-colors dark:text-[#F7F2E8]">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
+          <div className="mb-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-end">
             <div>
               <p className="text-sm font-semibold uppercase text-[#C0A468]">Support</p>
               <h1 className="mt-1 text-3xl font-bold sm:text-4xl">Hilfe & FAQ</h1>
               <p className="mt-2 text-sm text-muted-foreground">Die wichtigsten Fragen zur Benefit-Bar kompakt beantwortet.</p>
             </div>
 
-            <figure className="relative hidden h-64 overflow-hidden rounded-lg border border-[#D8C894]/80 bg-[#21170F] shadow-xl lg:block">
+            <figure className="relative hidden h-72 overflow-hidden rounded-lg border border-[#D8C894]/80 bg-gradient-to-br from-white via-[#F8EBCB] to-[#D9BE79] shadow-xl lg:block">
               <img
                 src="/brand/superbean-help.png"
                 alt="Super Bean Maskottchen der Benefit-Bar"
-                className="h-full w-full object-cover object-top opacity-95"
+                className="h-full w-full translate-x-[-7%] scale-110 object-cover object-top opacity-95"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-[#C0A468]/10" />
+              <div className="absolute inset-0 bg-gradient-to-t from-white/25 via-transparent to-[#C0A468]/10 mix-blend-screen" />
             </figure>
           </div>
 
