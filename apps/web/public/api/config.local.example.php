@@ -15,10 +15,12 @@ return [
     'BOOTSTRAP_ADMIN_FIRST_NAME' => 'Admin',
     'BOOTSTRAP_ADMIN_LAST_NAME' => 'Benefit-Bar',
 
-    'SMTP_HOST' => '',
-    'SMTP_PORT' => '',
-    'SMTP_USER' => '',
+    'SMTP_HOST' => 'smtp.hostinger.com',
+    'SMTP_PORT' => '465',
+    'SMTP_USER' => 'no-reply@tchibo-benefitbar.at',
     'SMTP_PASSWORD' => '',
     'SMTP_FROM' => 'Tchibo Benefitbar <no-reply@tchibo-benefitbar.at>',
-    'SMTP_SECURE' => '',
+    'SMTP_SECURE' => 'ssl',
+    'ALLOW_PHP_MAIL' => 'false',
+    'HR_NOTIFICATION_EMAIL' => 'prozessmanagement@eduscho.at',
 ];

@@ -17,36 +17,42 @@ const benefitCards = [
     image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=900&q=80',
     className: 'left-[5.5%] top-[4%] -rotate-3 hidden xl:block',
     objectPosition: 'center',
+    pinColor: '#EA5153',
   },
   {
     label: 'Mobilität',
     image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=900&q=80',
     className: 'left-[calc(17.5%_-_2.5rem)] top-[38%] rotate-2 hidden xl:block',
     objectPosition: 'center',
+    pinColor: '#719C6F',
   },
   {
     label: 'Fitness',
     image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=900&q=80',
     className: 'left-[6%] bottom-[5%] -rotate-2 hidden xl:block',
     objectPosition: 'center',
+    pinColor: '#4F6D8A',
   },
   {
     label: 'Weiterbildung',
     image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=900&q=80',
     className: 'right-[5.5%] top-[4%] rotate-3 hidden xl:block',
     objectPosition: 'center',
+    pinColor: '#C0A468',
   },
   {
     label: 'Homeoffice',
     image: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=900&q=80',
     className: 'right-[calc(17.5%_-_2.5rem)] top-[38%] -rotate-2 hidden xl:block',
     objectPosition: 'center',
+    pinColor: '#7E6BA8',
   },
   {
     label: 'Ernährung',
     image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=900&q=80',
     className: 'right-[6%] bottom-[5%] rotate-2 hidden xl:block',
     objectPosition: 'center',
+    pinColor: '#E08A5B',
   },
 ];
 
@@ -60,11 +66,18 @@ function BenefitImageCard({ card, compact = false }) {
     <div
       className={
         compact
-          ? 'relative h-28 w-48 overflow-hidden rounded-lg border-[6px] border-white bg-white shadow-xl ring-1 ring-black/5 dark:ring-white/10'
-          : `absolute h-[13.5rem] w-[23rem] overflow-hidden rounded-lg border-[8px] border-white bg-white shadow-2xl ring-1 ring-black/5 dark:ring-white/10 2xl:h-56 2xl:w-96 ${card.className}`
+          ? 'relative h-28 w-48 overflow-visible rounded-lg border-[6px] border-white bg-white shadow-xl ring-1 ring-black/5 dark:border-white dark:ring-white/10'
+          : `absolute h-[13.5rem] w-[23rem] overflow-visible rounded-lg border-[8px] border-white bg-white shadow-2xl ring-1 ring-black/5 dark:border-white dark:ring-white/10 2xl:h-56 2xl:w-96 ${card.className}`
       }
       aria-hidden="true"
     >
+      <div className="absolute left-1/2 top-0 z-20 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+        <span
+          className="h-5 w-5 rounded-full border-2 border-white shadow-[0_0.45rem_0.9rem_rgba(34,34,34,0.28),inset_0_0.2rem_0.35rem_rgba(255,255,255,0.45)]"
+          style={{ backgroundColor: card.pinColor || '#C0A468' }}
+        />
+        <span className="absolute top-[1.05rem] h-3 w-1 rounded-full bg-black/20 blur-[1px]" />
+      </div>
       <div className="relative h-full w-full overflow-hidden rounded-[2px]">
         <img
           src={card.image}

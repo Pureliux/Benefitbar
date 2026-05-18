@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-bootstrap-admin-v11';
+const BENEFITBAR_API_VERSION = '2026-05-18-smtp-required-v12';
 
 header('X-Content-Type-Options: nosniff');
 
@@ -904,12 +904,17 @@ function require_admin(): array
 
 function email_configured(): bool
 {
-    return smtp_configured() || native_mail_available();
+    return smtp_configured() || (allow_php_mail() && native_mail_available());
 }
 
 function smtp_configured(): bool
 {
     return config_value('SMTP_HOST') && config_value('SMTP_PORT') && config_value('SMTP_USER') && config_value('SMTP_PASSWORD') && config_value('SMTP_FROM');
+}
+
+function allow_php_mail(): bool
+{
+    return filter_var(config_value('ALLOW_PHP_MAIL', 'false'), FILTER_VALIDATE_BOOLEAN);
 }
 
 function native_mail_available(): bool
@@ -941,23 +946,70 @@ function normalized_email_from(string $value): string
     return 'Tchibo Benefitbar <' . $address . '>';
 }
 
-function send_native_mail(string $recipient, string $subject, string $html): void
+function sanitize_email_header(string $value): string
+{
+    return trim(str_replace(["\r", "\n"], '', $value));
+}
+
+function build_email_body(string $html, array $attachments, string &$contentType): string
+{
+    if (!$attachments) {
+        $contentType = 'text/html; charset=UTF-8';
+        return $html;
+    }
+
+    $boundary = '=_Benefitbar_' . bin2hex(random_bytes(12));
+    $contentType = 'multipart/mixed; boundary="' . $boundary . '"';
+    $body = "--{$boundary}\r\n"
+        . "Content-Type: text/html; charset=UTF-8\r\n"
+        . "Content-Transfer-Encoding: 8bit\r\n\r\n"
+        . $html . "\r\n";
+
+    foreach ($attachments as $attachment) {
+        $path = (string)($attachment['path'] ?? '');
+        if ($path === '' || !is_file($path) || !is_readable($path)) {
+            continue;
+        }
+
+        $filename = sanitize_email_header((string)($attachment['name'] ?? basename($path)));
+        $mimeType = sanitize_email_header((string)($attachment['type'] ?? 'application/octet-stream'));
+        if ($mimeType === '') {
+            $mimeType = 'application/octet-stream';
+        }
+
+        $body .= "--{$boundary}\r\n"
+            . "Content-Type: {$mimeType}; name=\"{$filename}\"\r\n"
+            . "Content-Transfer-Encoding: base64\r\n"
+            . "Content-Disposition: attachment; filename=\"{$filename}\"\r\n\r\n"
+            . chunk_split(base64_encode((string)file_get_contents($path)))
+            . "\r\n";
+    }
+
+    return $body . "--{$boundary}--\r\n";
+}
+
+function send_native_mail(string $recipient, string $subject, string $html, array $attachments = []): void
 {
     if (!native_mail_available()) {
         throw new RuntimeException('PHP mail() is not available on this hosting plan');
     }
 
     $from = default_email_from();
+    $body = build_email_body($html, $attachments, $contentType);
     $headers = [
         'From: ' . $from,
         'Reply-To: ' . email_address($from),
         'MIME-Version: 1.0',
-        'Content-Type: text/html; charset=UTF-8',
+        'Content-Type: ' . $contentType,
+        'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . (parse_url(config_value('FRONTEND_URL'), PHP_URL_HOST) ?: 'tchibo-benefitbar.at') . '>',
         'X-Mailer: PHP/' . phpversion(),
     ];
 
     $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
-    $sent = mail($recipient, $encodedSubject, $html, implode("\r\n", $headers));
+    $envelopeSender = email_address($from);
+    $sent = filter_var($envelopeSender, FILTER_VALIDATE_EMAIL)
+        ? mail($recipient, $encodedSubject, $body, implode("\r\n", $headers), '-f' . $envelopeSender)
+        : mail($recipient, $encodedSubject, $body, implode("\r\n", $headers));
     if (!$sent) {
         throw new RuntimeException('PHP mail() returned false');
     }
@@ -986,12 +1038,12 @@ function smtp_command($socket, string $command, array $expected): string
     return $response;
 }
 
-function send_smtp(string $recipient, string $subject, string $html): void
+function send_smtp(string $recipient, string $subject, string $html, array $attachments = []): void
 {
     $host = config_value('SMTP_HOST');
     $port = (int)config_value('SMTP_PORT');
     $secure = strtolower(config_value('SMTP_SECURE'));
-    $from = config_value('SMTP_FROM');
+    $from = default_email_from();
     $user = config_value('SMTP_USER');
     $password = config_value('SMTP_PASSWORD');
 
@@ -1020,15 +1072,17 @@ function send_smtp(string $recipient, string $subject, string $html): void
     smtp_command($socket, 'RCPT TO:<' . $recipient . '>', [250, 251]);
     smtp_command($socket, 'DATA', [354]);
 
+    $body = build_email_body($html, $attachments, $contentType);
     $headers = [
         'From: ' . $from,
         'To: ' . $recipient,
         'Subject: =?UTF-8?B?' . base64_encode($subject) . '?=',
         'MIME-Version: 1.0',
-        'Content-Type: text/html; charset=UTF-8',
+        'Content-Type: ' . $contentType,
         'Date: ' . gmdate('r'),
+        'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . (parse_url(config_value('FRONTEND_URL'), PHP_URL_HOST) ?: 'tchibo-benefitbar.at') . '>',
     ];
-    fwrite($socket, implode("\r\n", $headers) . "\r\n\r\n" . str_replace("\n.", "\n..", $html) . "\r\n.\r\n");
+    fwrite($socket, implode("\r\n", $headers) . "\r\n\r\n" . str_replace("\n.", "\n..", $body) . "\r\n.\r\n");
     $response = smtp_read($socket);
     if ((int)substr($response, 0, 3) !== 250) {
         throw new RuntimeException('SMTP DATA failed: ' . $response);
@@ -1045,19 +1099,19 @@ function email_address(string $value): string
     return trim($value);
 }
 
-function send_email(string $recipient, string $subject, string $html, string $type, ?int $userId = null): array
+function send_email(string $recipient, string $subject, string $html, string $type, ?int $userId = null, array $attachments = []): array
 {
     if (!email_configured()) {
-        $message = 'No SMTP configuration and PHP mail() is not available';
+        $message = 'SMTP configuration missing. PHP mail() fallback is disabled because it cannot guarantee delivery on this hosting plan.';
         log_email($recipient, $subject, $type, 'failed', $message, $userId);
         return ['success' => false, 'code' => 'email_not_configured', 'error' => $message];
     }
 
     try {
         if (smtp_configured()) {
-            send_smtp($recipient, $subject, $html);
+            send_smtp($recipient, $subject, $html, $attachments);
         } else {
-            send_native_mail($recipient, $subject, $html);
+            send_native_mail($recipient, $subject, $html, $attachments);
         }
         log_email($recipient, $subject, $type, 'sent', null, $userId);
         return ['success' => true];
@@ -1643,19 +1697,61 @@ function handle_submit_submission(): void
         }
     }
 
+    if (!email_configured()) {
+        json_response(['success' => false, 'error' => 'Der E-Mail-Versand ist aktuell nicht konfiguriert. Bitte kontaktiere HR/Prozessmanagement.', 'errorCode' => 'email_not_configured'], 503);
+    }
+
     db()->prepare("UPDATE bb_submissions SET status = 'submitted', submitted_at = ?, updated_at = ? WHERE id = ?")
         ->execute([now_sql(), now_sql(), $submission['id']]);
 
     $submitted = recalculate_submission((int)$submission['id']);
-    send_submission_notifications($user, $year, $submitted, load_selected_benefits((int)$submission['id']));
+    $notificationResult = send_submission_notifications($user, $year, $submitted, load_selected_benefits((int)$submission['id']));
+    if (!$notificationResult['success']) {
+        json_response(['success' => false, 'error' => 'Die Einreichung wurde gespeichert, aber die E-Mail konnte nicht versendet werden. Bitte technische Details im E-Mail-Log prüfen.', 'errorCode' => $notificationResult['code'] ?? 'email_send_failed'], 500);
+    }
     log_auth('submission_submitted', $user['email'], 'success');
     json_response(benefit_payload_for_user($user));
 }
 
-function send_submission_notifications(array $user, array $year, array $submission, array $selected): void
+function email_attachments_for_submission(int $userId, array $selected): array
+{
+    $selectedIds = array_values(array_filter(array_map(function ($item) {
+        return (int)($item['id'] ?? 0);
+    }, $selected)));
+
+    if (!$selectedIds) {
+        return [];
+    }
+
+    $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
+    $stmt = db()->prepare("
+        SELECT *
+        FROM bb_attachments
+        WHERE user_id = ? AND selected_benefit_id IN ({$placeholders})
+        ORDER BY uploaded_at ASC
+    ");
+    $stmt->execute(array_merge([$userId], $selectedIds));
+
+    $attachments = [];
+    foreach ($stmt->fetchAll() as $attachment) {
+        $path = attachment_absolute_path($attachment);
+        if (!$path || !is_file($path) || !is_readable($path)) {
+            continue;
+        }
+        $attachments[] = [
+            'path' => $path,
+            'name' => $attachment['file_name'],
+            'type' => mime_type_for_attachment($attachment),
+        ];
+    }
+
+    return $attachments;
+}
+
+function send_submission_notifications(array $user, array $year, array $submission, array $selected): array
 {
     if (!email_configured()) {
-        return;
+        return ['success' => false, 'code' => 'email_not_configured'];
     }
 
     $rows = '';
@@ -1664,16 +1760,26 @@ function send_submission_notifications(array $user, array $year, array $submissi
         $rows .= '<li>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . ': ' . number_format((float)$item['requested_amount'], 2, ',', '.') . ' EUR</li>';
     }
 
+    $attachments = email_attachments_for_submission((int)$user['id'], $selected);
+    $attachmentList = $attachments
+        ? '<p><strong>Anhänge:</strong> ' . count($attachments) . ' Datei(en) wurden dieser E-Mail beigefügt.</p>'
+        : '<p><strong>Anhänge:</strong> Keine Nachweise beigefügt.</p>';
+
     $html = '<p>Eine Benefit-Bar Einreichung wurde final eingereicht.</p>'
         . '<p><strong>User:</strong> ' . htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8') . '</p>'
         . '<p><strong>Benefit-Jahr:</strong> ' . (int)$year['year'] . '</p>'
         . '<ul>' . $rows . '</ul>'
         . '<p><strong>Gesamt:</strong> ' . number_format((float)$submission['total_selected_amount'], 2, ',', '.') . ' EUR<br>'
         . '<strong>Unternehmensanteil:</strong> ' . number_format((float)$submission['covered_by_company_amount'], 2, ',', '.') . ' EUR<br>'
-        . '<strong>Eigenanteil:</strong> ' . number_format((float)$submission['employee_own_contribution_amount'], 2, ',', '.') . ' EUR</p>';
+        . '<strong>Eigenanteil:</strong> ' . number_format((float)$submission['employee_own_contribution_amount'], 2, ',', '.') . ' EUR</p>'
+        . $attachmentList;
 
-    send_email(config_value('HR_NOTIFICATION_EMAIL', 'prozessmanagement@eduscho.at'), 'Benefit-Bar Einreichung', $html, 'submission_notification', (int)$user['id']);
-    send_email($user['email'], 'Tchibo Benefit-Bar - Einreichung erhalten', '<p>Deine Einreichung wurde erfolgreich übermittelt und wird geprüft.</p>', 'user_confirmation', (int)$user['id']);
+    $hrResult = send_email(config_value('HR_NOTIFICATION_EMAIL', 'prozessmanagement@eduscho.at'), 'Benefit-Bar Einreichung', $html, 'submission_notification', (int)$user['id'], $attachments);
+    if (!$hrResult['success']) {
+        return $hrResult;
+    }
+    $userResult = send_email($user['email'], 'Tchibo Benefit-Bar - Einreichung erhalten', '<p>Deine Einreichung wurde erfolgreich übermittelt und wird geprüft.</p>', 'user_confirmation', (int)$user['id']);
+    return $userResult['success'] ? ['success' => true] : $userResult;
 }
 
 function handle_admin_create_user(): void

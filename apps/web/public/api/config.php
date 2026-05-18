@@ -122,6 +122,7 @@ function benefitbar_config(): array
         'SMTP_PASSWORD' => getenv('SMTP_PASSWORD') ?: '',
         'SMTP_FROM' => getenv('SMTP_FROM') ?: '',
         'SMTP_SECURE' => getenv('SMTP_SECURE') ?: '',
+        'ALLOW_PHP_MAIL' => getenv('ALLOW_PHP_MAIL') ?: 'false',
         'HR_NOTIFICATION_EMAIL' => getenv('HR_NOTIFICATION_EMAIL') ?: 'prozessmanagement@eduscho.at',
     ];
 
