@@ -55,6 +55,47 @@ function benefitbar_config_path_label(string $path): string
     return basename($normalized);
 }
 
+function benefitbar_apply_database_url(array $config, string $databaseUrl): array
+{
+    if ($databaseUrl === '') {
+        return $config;
+    }
+
+    $parts = parse_url($databaseUrl);
+    if (!is_array($parts)) {
+        return $config;
+    }
+
+    if (!empty($parts['host'])) {
+        $config['DB_HOST'] = (string)$parts['host'];
+    }
+    if (!empty($parts['path'])) {
+        $config['DB_NAME'] = ltrim((string)$parts['path'], '/');
+    }
+    if (!empty($parts['user'])) {
+        $config['DB_USER'] = rawurldecode((string)$parts['user']);
+    }
+    if (array_key_exists('pass', $parts)) {
+        $config['DB_PASSWORD'] = rawurldecode((string)$parts['pass']);
+    }
+
+    return $config;
+}
+
+function benefitbar_apply_config_json(array $config, string $json): array
+{
+    if ($json === '') {
+        return $config;
+    }
+
+    $decoded = json_decode($json, true);
+    if (!is_array($decoded)) {
+        return $config;
+    }
+
+    return array_merge($config, $decoded);
+}
+
 function benefitbar_config(): array
 {
     static $config = null;
@@ -83,6 +124,9 @@ function benefitbar_config(): array
         'SMTP_SECURE' => getenv('SMTP_SECURE') ?: '',
         'HR_NOTIFICATION_EMAIL' => getenv('HR_NOTIFICATION_EMAIL') ?: 'prozessmanagement@eduscho.at',
     ];
+
+    $config = benefitbar_apply_database_url($config, getenv('DATABASE_URL') ?: getenv('MYSQL_URL') ?: '');
+    $config = benefitbar_apply_config_json($config, getenv('BENEFITBAR_CONFIG_JSON') ?: '');
 
     foreach (benefitbar_local_config_paths() as $localConfig) {
         if (is_file($localConfig)) {

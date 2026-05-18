@@ -21,6 +21,14 @@ DB_USER: voller Benutzername mit Prefix
 DB_PASSWORD: dein Datenbankpasswort
 ```
 
+Alternativ kann die komplette Datenbankverbindung als Hostinger-Umgebungsvariable gesetzt werden:
+
+```text
+DATABASE_URL=mysql://u406044332_benefitbar:DEIN_PASSWORT@localhost/u406044332_benefitbar
+```
+
+Das ist hilfreich, wenn Hostinger Dateien wie `benefitbar.config.php` bei einer erneuten Bereitstellung entfernt.
+
 ## 2. PHP-Konfiguration anlegen
 
 Nach dem Deploy im Hostinger-Dateimanager im Account-Root, also neben `public_html`:
