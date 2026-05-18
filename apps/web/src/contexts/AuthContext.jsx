@@ -4,7 +4,7 @@ import pb from '@/lib/pocketbaseClient';
 import apiServerClient from '@/lib/apiServerClient';
 
 const AuthContext = createContext(null);
-const API_SERVER_URL = (import.meta.env.VITE_API_SERVER_URL || '/hcgi/api').replace(/\/$/, '');
+const API_SERVER_URL = (import.meta.env.VITE_API_SERVER_URL || '/api/index.php').replace(/\/$/, '');
 const MICROSOFT_NOT_CONFIGURED_MESSAGE = 'Microsoft-Anmeldung ist aktuell nicht konfiguriert. Bitte verwende E-Mail und Passwort.';
 const MICROSOFT_FAILED_MESSAGE = 'Microsoft-Anmeldung konnte nicht abgeschlossen werden. Bitte verwende E-Mail und Passwort.';
 

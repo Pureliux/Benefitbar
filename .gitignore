@@ -5,6 +5,7 @@ dist/
 !.env.example
 apps/api/.env
 apps/web/.env
+apps/web/public/api/config.local.php
 apps/pocketbase/pb_data/*.db
 apps/pocketbase/pb_data/*.db-*
 apps/pocketbase/pb_data/*.wal

@@ -1,4 +1,4 @@
-const API_SERVER_URL = (import.meta.env.VITE_API_SERVER_URL || "/hcgi/api").replace(/\/$/, "");
+const API_SERVER_URL = (import.meta.env.VITE_API_SERVER_URL || "/api/index.php").replace(/\/$/, "");
 
 const apiServerClient = {
     fetch: async (url, options = {}) => {
