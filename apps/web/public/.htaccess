@@ -18,7 +18,7 @@
 
 	# Force browsers to drop stale cached app shells when opening routes such as /login.
 	<If "%{REQUEST_URI} !~ m#^/assets/# && %{REQUEST_URI} !~ m#^/api/#">
-		Header always set Clear-Site-Data "\"cache\""
+		Header always set Clear-Site-Data '"cache"'
 	</If>
 
 	# Hashed Vite assets are safe to cache for a long time.
