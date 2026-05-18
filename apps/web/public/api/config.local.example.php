@@ -23,6 +23,6 @@ return [
     'SMTP_SECURE' => 'ssl',
     'ALLOW_PHP_MAIL' => 'false',
     'MAIL_TRANSPORT' => 'smtp',
-    'PHP_MAIL_FROM' => 'Tchibo Benefitbar <no-reply@salmon-jellyfish-485958.hostingersite.com>',
+    'PHP_MAIL_FROM' => 'Tchibo Benefitbar <no-reply@tchibo-benefitbar.at>',
     'HR_NOTIFICATION_EMAIL' => 'prozessmanagement@eduscho.at',
 ];

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-mail-transport-switch-v18';
+const BENEFITBAR_API_VERSION = '2026-05-18-current-domain-mail-v19';
 
 header('X-Content-Type-Options: nosniff');
 
@@ -1001,6 +1001,11 @@ function php_mail_from(): string
     }
 
     return default_email_from();
+}
+
+function active_mail_from(): string
+{
+    return mail_transport() === 'php' ? php_mail_from() : default_email_from();
 }
 
 function normalized_email_from(string $value): string
@@ -2193,6 +2198,8 @@ function handle_admin_system_check(): void
         'smtp' => $smtp,
         'smtpConfigErrorCode' => $smtpIssue['code'] ?? null,
         'smtpConfigError' => $smtpIssue['message'] ?? null,
+        'mailTransport' => mail_transport(),
+        'mailFrom' => email_address(active_mail_from()),
         'authProvider' => 'email_password',
         'activeUserCount' => (int)($counts['active_users'] ?? 0),
         'usersWithPassword' => (int)($counts['users_with_password'] ?? 0),

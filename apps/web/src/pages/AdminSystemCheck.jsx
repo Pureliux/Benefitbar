@@ -226,7 +226,11 @@ const AdminSystemCheck = () => {
                   </div>
                   <div className="flex justify-between items-center p-3 bg-background border border-border rounded-lg">
                     <span className="text-muted-foreground flex items-center gap-2"><Mail className="h-4 w-4"/> Mail-Transport</span>
-                    <span className="text-foreground font-semibold">{stats.smtp?.MAIL_TRANSPORT || 'smtp'}</span>
+                    <span className="text-foreground font-semibold">{stats.mailTransport || stats.smtp?.MAIL_TRANSPORT || 'smtp'}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-background border border-border rounded-lg">
+                    <span className="text-muted-foreground flex items-center gap-2"><Mail className="h-4 w-4"/> Aktiver Absender</span>
+                    <span className="text-foreground font-semibold">{stats.mailFrom || '-'}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-background border border-border rounded-lg">
                     <span className="text-muted-foreground flex items-center gap-2"><ShieldAlert className="h-4 w-4"/> Auth-Modus</span>
