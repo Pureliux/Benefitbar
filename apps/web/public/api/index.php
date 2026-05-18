@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-domain-db-polish-v10';
+const BENEFITBAR_API_VERSION = '2026-05-18-bootstrap-admin-v11';
 
 header('X-Content-Type-Options: nosniff');
 
@@ -475,6 +475,38 @@ function bootstrap_admin(): void
 
     $existing = find_user_by_email($email);
     if ($existing) {
+        $now = now_sql();
+        $updates = [
+            'status' => 'active',
+            'auth_status' => 'active',
+            'is_admin' => 1,
+            'updated_at' => $now,
+        ];
+
+        if (!password_verify($password, (string)($existing['password_hash'] ?? ''))) {
+            $updates['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+            $updates['password_set_at'] = $now;
+            $updates['login_method'] = 'email_password';
+        } elseif (empty($existing['login_method'])) {
+            $updates['login_method'] = 'email_password';
+        }
+
+        if (trim((string)$existing['first_name']) === '') {
+            $updates['first_name'] = config_value('BOOTSTRAP_ADMIN_FIRST_NAME', 'Admin');
+        }
+        if (trim((string)$existing['last_name']) === '') {
+            $updates['last_name'] = config_value('BOOTSTRAP_ADMIN_LAST_NAME', 'Benefit-Bar');
+        }
+
+        $assignments = [];
+        $values = [];
+        foreach ($updates as $column => $value) {
+            $assignments[] = "{$column} = ?";
+            $values[] = $value;
+        }
+        $values[] = $existing['id'];
+
+        db()->prepare('UPDATE bb_users SET ' . implode(', ', $assignments) . ' WHERE id = ?')->execute($values);
         return;
     }
 
