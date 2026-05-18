@@ -349,7 +349,7 @@ const BenefitSelectionPage = () => {
                       <Button
                         onClick={() => handleSelectBenefit(benefit)}
                         disabled={!editable || budgetExceeded || savingId === benefit.id}
-                        className="w-full bg-[#C0A468] text-white hover:bg-[#A98D52]"
+                        className="w-full bg-[#E5E5E5] text-[#222222] hover:bg-[#D6D6D6] dark:bg-[#3A3A3A] dark:text-[#F7F2E8] dark:hover:bg-[#4A4A4A]"
                       >
                         {budgetExceeded ? 'Budget überschritten' : (savingId === benefit.id ? 'Wird gespeichert …' : 'Benefit auswählen')}
                       </Button>
