@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
-import { Check, Plus, ReceiptText, Sparkles, Trash2 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { Check, PencilLine, Plus, ReceiptText, Sparkles, Trash2, X } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import apiServerClient from '@/lib/apiServerClient';
@@ -36,6 +36,9 @@ const BenefitSelectionPage = () => {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
   const [customBenefit, setCustomBenefit] = useState({ title: '', description: '', amount: '' });
+  const [editingCustomId, setEditingCustomId] = useState(null);
+  const [customEdit, setCustomEdit] = useState({ title: '', description: '', amount: '' });
+  const [activeChartItem, setActiveChartItem] = useState(null);
   const repeatTimerRef = useRef(null);
   const repeatIntervalRef = useRef(null);
 
@@ -135,6 +138,49 @@ const BenefitSelectionPage = () => {
     }
   };
 
+  const startEditingCustom = (item) => {
+    setEditingCustomId(item.id);
+    setCustomEdit({
+      title: item.customTitle || '',
+      description: item.customDescription || '',
+      amount: formatEuroInput(item.requestedAmount),
+    });
+  };
+
+  const cancelEditingCustom = () => {
+    setEditingCustomId(null);
+    setCustomEdit({ title: '', description: '', amount: '' });
+  };
+
+  const handleUpdateCustomBenefit = async (selectedBenefitId) => {
+    const amount = parseEuroInput(customEdit.amount);
+    if (!customEdit.title.trim() || !amount || amount <= 0) {
+      toast.error('Bitte Titel und Betrag angeben.');
+      return;
+    }
+
+    setSavingId(selectedBenefitId);
+    try {
+      const res = await apiServerClient.fetch('/benefits/custom/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          selectedBenefitId,
+          title: customEdit.title,
+          description: customEdit.description,
+          amount,
+        }),
+      });
+      await updateFromResponse(res);
+      cancelEditingCustom();
+      toast.success('Eigener Benefit wurde aktualisiert.');
+    } catch (error) {
+      toast.error(error.message || 'Eigener Benefit konnte nicht aktualisiert werden.');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   const adjustCustomAmount = (delta) => {
     setCustomBenefit((current) => {
       const parsed = parseEuroInput(current.amount || '0');
@@ -211,6 +257,8 @@ const BenefitSelectionPage = () => {
     ...(remainingBudget > 0 ? [{ name: 'Noch verfügbar', value: remainingBudget, color: '#E8E2D6' }] : []),
   ];
   const safeChartData = chartData.length ? chartData : [{ name: 'Noch verfügbar', value: annualBudget, color: '#E8E2D6' }];
+  const chartDetail = activeChartItem || { name: 'Noch verfügbar', value: remainingBudget, color: '#E8E2D6' };
+  const handleChartEnter = (entry) => setActiveChartItem(entry?.payload || entry);
 
   return (
     <>
@@ -382,15 +430,33 @@ const BenefitSelectionPage = () => {
               <div className="relative h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={safeChartData} dataKey="value" innerRadius={86} outerRadius={124} paddingAngle={3} stroke="transparent">
+                    <Pie
+                      data={safeChartData}
+                      dataKey="value"
+                      innerRadius={86}
+                      outerRadius={124}
+                      paddingAngle={3}
+                      stroke="transparent"
+                      onMouseEnter={handleChartEnter}
+                      onMouseLeave={() => setActiveChartItem(null)}
+                    >
                       {safeChartData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                     </Pie>
-                    <Tooltip formatter={(value) => currency.format(Number(value))} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                   <span className="text-xs uppercase text-muted-foreground">Noch frei</span>
                   <strong className="max-w-[9rem] text-balance text-xl leading-tight">{currency.format(remainingBudget)}</strong>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border bg-background p-3 shadow-sm dark:bg-muted/30">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: chartDetail.color }} />
+                    <span className="truncate font-medium">{chartDetail.name}</span>
+                  </span>
+                  <span className="shrink-0 font-bold">{currency.format(chartDetail.value || 0)}</span>
                 </div>
               </div>
 
@@ -414,14 +480,74 @@ const BenefitSelectionPage = () => {
                   <div className="max-h-72 space-y-3 overflow-auto pr-1">
                     {selectedBenefits.map((item) => (
                       <div key={item.id} className="rounded-md border border-border p-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="font-medium leading-snug">{item.isCustomBenefit ? item.customTitle : item.benefit?.title}</p>
-                          <p className="shrink-0 font-bold text-[#C0A468]">{currency.format(item.requestedAmount)}</p>
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Unternehmen {currency.format(item.coveredAmount)}
-                          {item.ownContributionAmount > 0 ? ` · Eigenanteil ${currency.format(item.ownContributionAmount)}` : ''}
-                        </p>
+                        {item.isCustomBenefit && editingCustomId === item.id ? (
+                          <div className="space-y-2">
+                            <Input
+                              value={customEdit.title}
+                              onChange={(event) => setCustomEdit({ ...customEdit, title: event.target.value })}
+                              className="h-9 bg-background"
+                              placeholder="Titel"
+                            />
+                            <Textarea
+                              value={customEdit.description}
+                              onChange={(event) => setCustomEdit({ ...customEdit, description: event.target.value })}
+                              className="min-h-20 resize-none bg-background"
+                              placeholder="Beschreibung"
+                            />
+                            <Input
+                              inputMode="decimal"
+                              value={customEdit.amount}
+                              onChange={(event) => setCustomEdit({ ...customEdit, amount: event.target.value })}
+                              onBlur={() => setCustomEdit((current) => ({ ...current, amount: formatEuroInput(current.amount) }))}
+                              className="h-9 bg-background"
+                              placeholder="0,00"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => handleUpdateCustomBenefit(item.id)}
+                                disabled={savingId === item.id}
+                                className="flex-1 bg-[#C0A468] text-white hover:bg-[#A98D52]"
+                              >
+                                Speichern
+                              </Button>
+                              <Button type="button" size="sm" variant="outline" onClick={cancelEditingCustom}>
+                                <X className="mr-1 h-4 w-4" />
+                                Abbrechen
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="font-medium leading-snug">{item.isCustomBenefit ? item.customTitle : item.benefit?.title}</p>
+                              <p className="shrink-0 font-bold text-[#C0A468]">{currency.format(item.requestedAmount)}</p>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Unternehmen {currency.format(item.coveredAmount)}
+                              {item.ownContributionAmount > 0 ? ` · Eigenanteil ${currency.format(item.ownContributionAmount)}` : ''}
+                            </p>
+                            {item.isCustomBenefit && editable && (
+                              <div className="mt-3 flex gap-2">
+                                <Button type="button" size="sm" variant="outline" onClick={() => startEditingCustom(item)} className="flex-1">
+                                  <PencilLine className="mr-2 h-4 w-4" />
+                                  Bearbeiten
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleRemove(item.id)}
+                                  disabled={savingId === item.id}
+                                  className="text-[#EA5153] hover:bg-[#EA5153]/10 hover:text-[#EA5153]"
+                                  aria-label="Eigenen Benefit entfernen"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>

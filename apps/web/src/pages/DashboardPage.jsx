@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { AlertCircle, ArrowRight, CheckCircle2, CircleDollarSign, Clock, WalletCards } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import apiServerClient from '@/lib/apiServerClient';
@@ -42,6 +42,7 @@ const DashboardPage = () => {
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [activeChartItem, setActiveChartItem] = useState(null);
 
   useEffect(() => {
     const loadOverview = async () => {
@@ -85,6 +86,8 @@ const DashboardPage = () => {
     }
     return segments.length ? segments : [{ name: 'Noch verfügbar', value: totalBudget, color: '#E8E2D6' }];
   }, [remainingBudget, selectedBenefits, totalBudget]);
+  const chartDetail = activeChartItem || { name: 'Noch verfügbar', value: remainingBudget, color: '#E8E2D6' };
+  const handleChartEnter = (entry) => setActiveChartItem(entry?.payload || entry);
 
   if (loading) {
     return (
@@ -154,15 +157,33 @@ const DashboardPage = () => {
               <div className="relative h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={chartData} dataKey="value" innerRadius={92} outerRadius={126} paddingAngle={3} stroke="transparent">
+                    <Pie
+                      data={chartData}
+                      dataKey="value"
+                      innerRadius={92}
+                      outerRadius={126}
+                      paddingAngle={3}
+                      stroke="transparent"
+                      onMouseEnter={handleChartEnter}
+                      onMouseLeave={() => setActiveChartItem(null)}
+                    >
                       {chartData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                     </Pie>
-                    <Tooltip formatter={(value) => currency.format(Number(value))} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                   <span className="text-xs uppercase text-muted-foreground">Noch frei</span>
                   <strong className="max-w-[9rem] text-balance text-xl leading-tight">{currency.format(remainingBudget)}</strong>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border bg-background p-3 shadow-sm dark:bg-muted/30">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: chartDetail.color }} />
+                    <span className="truncate font-medium">{chartDetail.name}</span>
+                  </span>
+                  <span className="shrink-0 font-bold">{currency.format(chartDetail.value || 0)}</span>
                 </div>
               </div>
 

@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, CheckCircle2, Clock3, FileText, Send, Upload } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock3, ExternalLink, FileText, Send, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
-import apiServerClient from '@/lib/apiServerClient';
+import apiServerClient, { API_SERVER_URL } from '@/lib/apiServerClient';
 import Header from '@/components/Header.jsx';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -34,6 +34,7 @@ const SubmissionPage = () => {
   const [loading, setLoading] = useState(true);
   const [confirmed, setConfirmed] = useState(false);
   const [uploadingId, setUploadingId] = useState(null);
+  const [deletingAttachmentId, setDeletingAttachmentId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const loadOverview = async () => {
@@ -84,6 +85,30 @@ const SubmissionPage = () => {
     }
   };
 
+  const handleDeleteAttachment = async (attachmentId) => {
+    setDeletingAttachmentId(attachmentId);
+    try {
+      const res = await apiServerClient.fetch('/attachments/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attachmentId }),
+      });
+      await updateFromResponse(res);
+      toast.success('Nachweis wurde entfernt.');
+    } catch (error) {
+      toast.error(error.message || 'Nachweis konnte nicht entfernt werden.');
+    } finally {
+      setDeletingAttachmentId(null);
+    }
+  };
+
+  const attachmentUrl = (attachment) => {
+    const params = new URLSearchParams({ id: attachment.id });
+    const token = localStorage.getItem('backend_token');
+    if (token) params.set('token', token);
+    return `${API_SERVER_URL}/attachments/file?${params.toString()}`;
+  };
+
   const handleSaveDraft = async () => {
     try {
       const res = await apiServerClient.fetch('/submission/save-draft', { method: 'POST' });
@@ -119,7 +144,12 @@ const SubmissionPage = () => {
 
   const attachmentsBySelectedId = useMemo(() => {
     const map = new Map();
-    attachments.forEach((attachment) => map.set(attachment.selectedBenefitId, attachment));
+    attachments.forEach((attachment) => {
+      const key = attachment.selectedBenefitId;
+      const list = map.get(key) || [];
+      list.push(attachment);
+      map.set(key, list);
+    });
     return map;
   }, [attachments]);
 
@@ -207,8 +237,8 @@ const SubmissionPage = () => {
             {selectedBenefits.length ? (
               <div className="space-y-4">
                 {selectedBenefits.map((item) => {
-                  const attachment = attachmentsBySelectedId.get(item.id);
-                  const needsReceipt = item.benefit?.receiptRequired;
+                  const itemAttachments = attachmentsBySelectedId.get(item.id) || [];
+                  const needsReceipt = item.benefit?.receiptRequired || item.isCustomBenefit;
                   return (
                     <article key={item.id} className="rounded-lg border border-border bg-background p-4">
                       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -229,12 +259,43 @@ const SubmissionPage = () => {
                               <FileText className="h-4 w-4 text-muted-foreground" />
                               <span className="text-sm font-medium">Nachweis erforderlich</span>
                             </div>
-                            {attachment ? (
-                              <span className="text-xs font-semibold text-[#719C6F]">{attachment.fileName}</span>
+                            {itemAttachments.length ? (
+                              <span className="text-xs font-semibold text-[#719C6F]">{itemAttachments.length} Nachweis{itemAttachments.length === 1 ? '' : 'e'} hochgeladen</span>
                             ) : (
                               <span className="text-xs font-semibold text-[#EA5153]">Noch nicht hochgeladen</span>
                             )}
                           </div>
+                          {itemAttachments.length > 0 && (
+                            <div className="mb-3 space-y-2">
+                              {itemAttachments.map((attachment) => (
+                                <div key={attachment.id} className="flex flex-col gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                                  <a
+                                    href={attachmentUrl(attachment)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex min-w-0 items-center gap-2 font-medium text-[#8B7138] hover:underline dark:text-[#EDD38E]"
+                                  >
+                                    <FileText className="h-4 w-4 shrink-0" />
+                                    <span className="truncate">{attachment.fileName}</span>
+                                    <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                                  </a>
+                                  {!isLocked && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteAttachment(attachment.id)}
+                                      disabled={deletingAttachmentId === attachment.id}
+                                      className="justify-start text-[#EA5153] hover:bg-[#EA5153]/10 hover:text-[#EA5153] sm:justify-center"
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Entfernen
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                           {!isLocked && (
                             <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md bg-muted px-4 py-3 text-sm font-medium transition hover:bg-muted/80">
                               <Upload className="h-4 w-4" />

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-admin-tools-v6';
+const BENEFITBAR_API_VERSION = '2026-05-18-attachments-v8';
 
 header('X-Content-Type-Options: nosniff');
 
@@ -308,15 +308,7 @@ function seed_benefit_data(PDO $pdo): void
     $countStmt = $pdo->prepare('SELECT COUNT(*) count FROM bb_benefits WHERE benefit_year_id = ?');
     $countStmt->execute([$benefitYearId]);
     if ((int)($countStmt->fetch()['count'] ?? 0) > 0) {
-        $updates = [
-            ['Wiener Öffi-Ticket', 'Zuschuss für öffentliche Verkehrsmittel und nachhaltige Mobilität.', 'Mobilität', 'Wiener Öffi-Ticket'],
-            ['Essens-/Verpflegungszuschuss', 'Unterstützung für Mahlzeiten und gesunde Ernährung.', 'Ernährung', 'Essens-/Verpflegungszuschuss'],
-            ['Homeoffice-Ausstattung', 'Arbeitsmittel für einen guten Arbeitsplatz zuhause.', 'Arbeitsplatz', 'Homeoffice-Ausstattung'],
-        ];
-        $updateStmt = $pdo->prepare('UPDATE bb_benefits SET title = ?, description = ?, category = ?, updated_at = ? WHERE benefit_year_id = ? AND title = ?');
-        foreach ($updates as $update) {
-            $updateStmt->execute([$update[0], $update[1], $update[2], $now, $benefitYearId, $update[3]]);
-        }
+        normalize_seed_benefit_copy($pdo, $benefitYearId);
         return;
     }
 
@@ -351,6 +343,57 @@ function seed_benefit_data(PDO $pdo): void
             $now,
             $now,
         ]);
+    }
+
+    normalize_seed_benefit_copy($pdo, $benefitYearId);
+}
+
+function normalize_german_copy(?string $value): string
+{
+    $text = (string)$value;
+    $replacements = [
+        'fuer' => 'für',
+        'Fuer' => 'Für',
+        'oeffentliche' => 'öffentliche',
+        'Oeffentliche' => 'Öffentliche',
+        'Oeffi' => 'Öffi',
+        'oeffi' => 'öffi',
+        'Mobilitaet' => 'Mobilität',
+        'mobilitaet' => 'mobilität',
+        'Ernaehrung' => 'Ernährung',
+        'ernaehrung' => 'ernährung',
+        'Unterstuetzung' => 'Unterstützung',
+        'unterstuetzung' => 'unterstützung',
+        'ausgewaehlt' => 'ausgewählt',
+        'Ausgewaehlt' => 'Ausgewählt',
+        'waehlen' => 'wählen',
+        'Waehlen' => 'Wählen',
+        'gewaehlt' => 'gewählt',
+        'Gewaehlt' => 'Gewählt',
+        'pruefen' => 'prüfen',
+        'Pruefen' => 'Prüfen',
+        'ueber 12 Monate' => 'über 12 Monate',
+        'Ueber 12 Monate' => 'Über 12 Monate',
+        'Grossbuchstaben' => 'Großbuchstaben',
+    ];
+
+    return strtr($text, $replacements);
+}
+
+function normalize_seed_benefit_copy(PDO $pdo, int $benefitYearId): void
+{
+    $stmt = $pdo->prepare('SELECT id, title, description, category FROM bb_benefits WHERE benefit_year_id = ?');
+    $stmt->execute([$benefitYearId]);
+    $update = $pdo->prepare('UPDATE bb_benefits SET title = ?, description = ?, category = ?, updated_at = ? WHERE id = ?');
+
+    foreach ($stmt->fetchAll() as $benefit) {
+        $title = normalize_german_copy($benefit['title'] ?? '');
+        $description = normalize_german_copy($benefit['description'] ?? '');
+        $category = normalize_german_copy($benefit['category'] ?? '');
+
+        if ($title !== ($benefit['title'] ?? '') || $description !== ($benefit['description'] ?? '') || $category !== ($benefit['category'] ?? '')) {
+            $update->execute([$title, $description, $category, now_sql(), $benefit['id']]);
+        }
     }
 }
 
@@ -507,9 +550,9 @@ function safe_benefit(array $benefit): array
     return [
         'id' => (string)$benefit['id'],
         'benefitYearId' => (string)$benefit['benefit_year_id'],
-        'title' => $benefit['title'],
-        'description' => $benefit['description'],
-        'category' => $benefit['category'],
+        'title' => normalize_german_copy($benefit['title'] ?? ''),
+        'description' => normalize_german_copy($benefit['description'] ?? ''),
+        'category' => normalize_german_copy($benefit['category'] ?? ''),
         'fixedAmount' => (float)$benefit['fixed_amount'],
         'payoutMode' => $benefit['payout_mode'],
         'receiptRequired' => (bool)$benefit['receipt_required'],
@@ -545,9 +588,9 @@ function safe_selected_benefit(array $selected): array
     if (!empty($selected['benefit_title'])) {
         $benefit = [
             'id' => (string)$selected['benefit_id'],
-            'title' => $selected['benefit_title'],
-            'description' => $selected['benefit_description'],
-            'category' => $selected['benefit_category'],
+            'title' => normalize_german_copy($selected['benefit_title'] ?? ''),
+            'description' => normalize_german_copy($selected['benefit_description'] ?? ''),
+            'category' => normalize_german_copy($selected['benefit_category'] ?? ''),
             'fixedAmount' => (float)$selected['benefit_fixed_amount'],
             'payoutMode' => $selected['benefit_payout_mode'],
             'receiptRequired' => (bool)$selected['benefit_receipt_required'],
@@ -559,8 +602,8 @@ function safe_selected_benefit(array $selected): array
         'submissionId' => (string)$selected['submission_id'],
         'benefitId' => $selected['benefit_id'] ? (string)$selected['benefit_id'] : null,
         'isCustomBenefit' => (bool)$selected['is_custom_benefit'],
-        'customTitle' => $selected['custom_title'],
-        'customDescription' => $selected['custom_description'],
+        'customTitle' => normalize_german_copy($selected['custom_title'] ?? ''),
+        'customDescription' => normalize_german_copy($selected['custom_description'] ?? ''),
         'requestedAmount' => (float)$selected['requested_amount'],
         'coveredAmount' => (float)$selected['covered_amount'],
         'ownContributionAmount' => (float)$selected['own_contribution_amount'],
@@ -790,6 +833,22 @@ function bearer_token(): ?string
 function require_user(): array
 {
     $session = verify_session_token(bearer_token());
+    if (!$session) {
+        json_response(['success' => false, 'error' => 'Authentifizierung erforderlich.', 'errorCode' => 'not_authenticated'], 401);
+    }
+
+    $user = find_user_by_id((int)$session['sub']);
+    if (!$user) {
+        json_response(['success' => false, 'error' => 'Authentifizierung erforderlich.', 'errorCode' => 'not_authenticated'], 401);
+    }
+
+    return $user;
+}
+
+function require_user_from_bearer_or_query(): array
+{
+    $token = bearer_token() ?: (string)($_GET['token'] ?? '');
+    $session = verify_session_token($token);
     if (!$session) {
         json_response(['success' => false, 'error' => 'Authentifizierung erforderlich.', 'errorCode' => 'not_authenticated'], 401);
     }
@@ -1262,6 +1321,40 @@ function handle_add_custom_benefit(): void
     json_response(benefit_payload_for_user($user));
 }
 
+function handle_update_custom_benefit(): void
+{
+    $user = require_user();
+    $body = request_json();
+    $selectedBenefitId = (int)($body['selectedBenefitId'] ?? 0);
+    $title = trim((string)($body['title'] ?? ''));
+    $description = trim((string)($body['description'] ?? ''));
+    $amount = (float)($body['amount'] ?? 0);
+
+    if (!$selectedBenefitId || $title === '' || $amount <= 0) {
+        json_response(['success' => false, 'error' => 'Bitte Titel und Betrag angeben.', 'errorCode' => 'invalid_custom_benefit'], 400);
+    }
+
+    $year = current_benefit_year();
+    $submission = get_or_create_submission((int)$user['id'], (int)$year['id']);
+    ensure_editable_submission($submission);
+
+    $ownedStmt = db()->prepare('SELECT id FROM bb_selected_benefits WHERE id = ? AND submission_id = ? AND is_custom_benefit = 1 LIMIT 1');
+    $ownedStmt->execute([$selectedBenefitId, $submission['id']]);
+    if (!$ownedStmt->fetch()) {
+        json_response(['success' => false, 'error' => 'Eigener Benefit wurde nicht gefunden.', 'errorCode' => 'custom_benefit_not_found'], 404);
+    }
+
+    db()->prepare("
+        UPDATE bb_selected_benefits
+        SET custom_title = ?, custom_description = ?, requested_amount = ?, updated_at = ?
+        WHERE id = ? AND submission_id = ? AND is_custom_benefit = 1
+    ")->execute([$title, $description, $amount, now_sql(), $selectedBenefitId, $submission['id']]);
+
+    recalculate_submission((int)$submission['id']);
+    log_auth('custom_benefit_updated', $user['email'], 'success', null, $title);
+    json_response(benefit_payload_for_user($user));
+}
+
 function handle_remove_selected_benefit(): void
 {
     $user = require_user();
@@ -1271,9 +1364,132 @@ function handle_remove_selected_benefit(): void
     $submission = get_or_create_submission((int)$user['id'], (int)$year['id']);
     ensure_editable_submission($submission);
 
+    $attachmentsStmt = db()->prepare('SELECT * FROM bb_attachments WHERE selected_benefit_id = ? AND user_id = ?');
+    $attachmentsStmt->execute([$selectedBenefitId, $user['id']]);
+    foreach ($attachmentsStmt->fetchAll() as $attachment) {
+        delete_attachment_file($attachment);
+    }
+    db()->prepare('DELETE FROM bb_attachments WHERE selected_benefit_id = ? AND user_id = ?')->execute([$selectedBenefitId, $user['id']]);
     db()->prepare('DELETE FROM bb_selected_benefits WHERE id = ? AND submission_id = ?')->execute([$selectedBenefitId, $submission['id']]);
     recalculate_submission((int)$submission['id']);
     json_response(benefit_payload_for_user($user));
+}
+
+function attachment_absolute_path(array $attachment): ?string
+{
+    $relative = str_replace(['\\', "\0"], ['/', ''], (string)($attachment['file_path'] ?? ''));
+    $base = realpath(__DIR__ . '/uploads');
+    $path = realpath(__DIR__ . '/' . $relative);
+
+    if (!$base || !$path || strpos($path, $base . DIRECTORY_SEPARATOR) !== 0) {
+        return null;
+    }
+
+    return $path;
+}
+
+function delete_attachment_file(array $attachment): void
+{
+    $path = attachment_absolute_path($attachment);
+    if ($path && is_file($path)) {
+        @unlink($path);
+    }
+}
+
+function mime_type_for_attachment(array $attachment): string
+{
+    $type = trim((string)($attachment['file_type'] ?? ''));
+    if ($type !== '') {
+        return $type;
+    }
+
+    $extension = strtolower(pathinfo((string)($attachment['file_name'] ?? ''), PATHINFO_EXTENSION));
+    if ($extension === 'pdf') {
+        return 'application/pdf';
+    }
+    if ($extension === 'jpg' || $extension === 'jpeg') {
+        return 'image/jpeg';
+    }
+    if ($extension === 'png') {
+        return 'image/png';
+    }
+    if ($extension === 'docx') {
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
+
+    return 'application/octet-stream';
+}
+
+function attachment_for_current_user(int $attachmentId, array $user): ?array
+{
+    $stmt = db()->prepare('SELECT * FROM bb_attachments WHERE id = ? LIMIT 1');
+    $stmt->execute([$attachmentId]);
+    $attachment = $stmt->fetch();
+    if (!$attachment) {
+        return null;
+    }
+
+    if ((int)$attachment['user_id'] !== (int)$user['id'] && empty($user['is_admin'])) {
+        return null;
+    }
+
+    return $attachment;
+}
+
+function handle_delete_attachment(): void
+{
+    $user = require_user();
+    $body = request_json();
+    $attachmentId = (int)($body['attachmentId'] ?? 0);
+    if (!$attachmentId) {
+        json_response(['success' => false, 'error' => 'Nachweis wurde nicht gefunden.', 'errorCode' => 'attachment_not_found'], 404);
+    }
+
+    $year = current_benefit_year();
+    $submission = get_or_create_submission((int)$user['id'], (int)$year['id']);
+    ensure_editable_submission($submission);
+
+    $stmt = db()->prepare("
+        SELECT a.*
+        FROM bb_attachments a
+        INNER JOIN bb_selected_benefits sb ON sb.id = a.selected_benefit_id
+        WHERE a.id = ? AND a.user_id = ? AND sb.submission_id = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$attachmentId, $user['id'], $submission['id']]);
+    $attachment = $stmt->fetch();
+    if (!$attachment) {
+        json_response(['success' => false, 'error' => 'Nachweis wurde nicht gefunden.', 'errorCode' => 'attachment_not_found'], 404);
+    }
+
+    delete_attachment_file($attachment);
+    db()->prepare('DELETE FROM bb_attachments WHERE id = ? AND user_id = ?')->execute([$attachmentId, $user['id']]);
+    json_response(benefit_payload_for_user($user));
+}
+
+function handle_attachment_file(): void
+{
+    $user = require_user_from_bearer_or_query();
+    $attachmentId = (int)($_GET['id'] ?? 0);
+    $attachment = $attachmentId ? attachment_for_current_user($attachmentId, $user) : null;
+    if (!$attachment) {
+        json_response(['success' => false, 'error' => 'Nachweis wurde nicht gefunden.', 'errorCode' => 'attachment_not_found'], 404);
+    }
+
+    $path = attachment_absolute_path($attachment);
+    if (!$path || !is_file($path)) {
+        json_response(['success' => false, 'error' => 'Datei wurde nicht gefunden.', 'errorCode' => 'file_not_found'], 404);
+    }
+
+    $filename = str_replace(['"', "\r", "\n"], '', (string)$attachment['file_name']);
+    $disposition = !empty($_GET['download']) ? 'attachment' : 'inline';
+
+    header('Content-Type: ' . mime_type_for_attachment($attachment));
+    header('Content-Length: ' . filesize($path));
+    header('Content-Disposition: ' . $disposition . '; filename="' . $filename . '"');
+    header('Cache-Control: private, max-age=300');
+    readfile($path);
+    exit;
 }
 
 function handle_upload_attachment(): void
@@ -1359,7 +1575,7 @@ function handle_submit_submission(): void
         return (int)$attachment['selected_benefit_id'];
     }, $attachments);
     foreach ($selected as $item) {
-        if (!empty($item['benefit_receipt_required']) && !in_array((int)$item['id'], $attachedIds, true)) {
+        if ((!empty($item['benefit_receipt_required']) || !empty($item['is_custom_benefit'])) && !in_array((int)$item['id'], $attachedIds, true)) {
             json_response(['success' => false, 'error' => 'Bitte lade alle erforderlichen Nachweise hoch.', 'errorCode' => 'missing_receipts'], 400);
         }
     }
@@ -1670,8 +1886,11 @@ try {
     if ($method === 'GET' && $path === '/benefits/overview') handle_benefits_overview();
     if ($method === 'POST' && $path === '/benefits/select') handle_select_benefit();
     if ($method === 'POST' && $path === '/benefits/custom') handle_add_custom_benefit();
+    if ($method === 'POST' && $path === '/benefits/custom/update') handle_update_custom_benefit();
     if ($method === 'POST' && $path === '/benefits/remove') handle_remove_selected_benefit();
+    if ($method === 'GET' && $path === '/attachments/file') handle_attachment_file();
     if ($method === 'POST' && $path === '/attachments/upload') handle_upload_attachment();
+    if ($method === 'POST' && $path === '/attachments/delete') handle_delete_attachment();
     if ($method === 'POST' && $path === '/submission/save-draft') handle_save_submission_draft();
     if ($method === 'POST' && $path === '/submission/submit') handle_submit_submission();
 

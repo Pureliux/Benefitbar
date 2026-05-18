@@ -26,7 +26,7 @@ const Header = () => {
 
   return (
     <header className="relative z-50 bg-primary text-primary-foreground shadow-sm transition-colors duration-200">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-3 sm:px-5 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <Link to={isSignedIn ? '/dashboard' : '/login'} className="flex items-center gap-2 transition-opacity hover:opacity-90">
             <img
@@ -36,7 +36,7 @@ const Header = () => {
             />
           </Link>
 
-          <nav className="hidden items-center gap-6 md:flex">
+          <nav className="hidden items-center gap-5 md:flex lg:gap-7">
             {isSignedIn && navItems.map((item) => (
               <Link
                 key={item.path}
@@ -51,7 +51,7 @@ const Header = () => {
               </Link>
             ))}
 
-            <div className="ml-2 flex items-center gap-2 border-l border-primary-foreground/20 pl-4">
+            <div className="ml-1 flex items-center gap-2 border-l border-primary-foreground/20 pl-4">
               <ThemeToggle />
               {isSignedIn ? (
                 <Button
