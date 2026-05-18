@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-email-body-fix-v15';
+const BENEFITBAR_API_VERSION = '2026-05-18-auto-access-email-logs-v16';
 
 header('X-Content-Type-Options: nosniff');
 
@@ -2094,6 +2094,12 @@ function handle_admin_system_check(): void
         ORDER BY created_at DESC
         LIMIT 10
     ");
+    $emailLogsStmt = db()->query("
+        SELECT created_at createdAt, sent_at sentAt, recipient, subject, email_type emailType, status, error_message errorMessage
+        FROM bb_email_log
+        ORDER BY created_at DESC
+        LIMIT 10
+    ");
 
     json_response([
         'success' => true,
@@ -2109,6 +2115,7 @@ function handle_admin_system_check(): void
         'usersWithoutPassword' => (int)($counts['users_without_password'] ?? 0),
         'recentLoginErrors' => $loginErrorsStmt->fetchAll(),
         'recentEmailErrors' => $emailErrorsStmt->fetchAll(),
+        'recentEmailLogs' => $emailLogsStmt->fetchAll(),
     ]);
 }
 

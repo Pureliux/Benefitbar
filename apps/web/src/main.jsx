@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from '@/App';
 import '@/index.css';
 
-const APP_VERSION = '2026-05-18-silver-pin-tips-v17';
+const APP_VERSION = '2026-05-18-no-login-pins-v19';
 
 async function refreshIfAppShellIsStale() {
 	if (!('fetch' in window)) {
