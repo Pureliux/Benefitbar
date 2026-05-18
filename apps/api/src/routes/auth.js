@@ -15,15 +15,21 @@ import {
 } from '../utils/tokenUtils.js';
 import {
   getEmailConfigStatus,
+  isEmailConfigurationErrorCode,
   logEmailConfigurationFailure,
   sendActivationEmail,
   sendPasswordResetEmail,
 } from '../utils/emailService.js';
+import {
+  deriveNamesFromEmail,
+  isAllowedLoginEmail,
+  LOGIN_EMAIL_ERROR_MESSAGE,
+} from '../utils/emailAccess.js';
 
 const router = express.Router();
 
 const TOKEN_EXPIRY_HOURS = 24;
-const EMAIL_DOMAIN_MESSAGE = 'Bitte verwende deine @eduscho.at-E-Mail-Adresse.';
+const EMAIL_DOMAIN_MESSAGE = LOGIN_EMAIL_ERROR_MESSAGE;
 const TECHNICAL_LOGIN_MESSAGE = 'Die Anmeldung konnte technisch nicht verarbeitet werden. Bitte später erneut versuchen.';
 const TECHNICAL_ACTION_MESSAGE = 'Die Anfrage konnte technisch nicht verarbeitet werden. Bitte später erneut versuchen.';
 const EMAIL_NOT_CONFIGURED_MESSAGE = 'Der E-Mail-Versand ist aktuell nicht konfiguriert. Bitte kontaktiere HR/Prozessmanagement.';
@@ -40,10 +46,6 @@ function error(res, status, message, errorCode) {
 
 function success(res, payload = {}) {
   return res.json({ success: true, ...payload });
-}
-
-function isEduschoEmail(email) {
-  return normalizeEmail(email).endsWith('@eduscho.at');
 }
 
 function addHours(date, hours) {
@@ -124,7 +126,7 @@ router.post('/login', async (req, res) => {
     return error(res, 400, 'Bitte E-Mail-Adresse und Passwort eingeben.', 'missing_credentials');
   }
 
-  if (!validateEmailFormat(email) || !isEduschoEmail(email)) {
+  if (!validateEmailFormat(email) || !isAllowedLoginEmail(email)) {
     await logAuthEvent({ req, action: 'login_failed', email, status: 'failed', errorCode: 'invalid_domain', errorMessage: EMAIL_DOMAIN_MESSAGE });
     return error(res, 400, EMAIL_DOMAIN_MESSAGE, 'invalid_domain');
   }
@@ -182,27 +184,46 @@ router.post('/request-access', async (req, res) => {
     return error(res, 400, 'Bitte gib deine E-Mail-Adresse ein.', 'missing_email');
   }
 
-  if (!validateEmailFormat(email) || !isEduschoEmail(email)) {
+  if (!validateEmailFormat(email) || !isAllowedLoginEmail(email)) {
     await logAuthEvent({ req, action: 'access_requested', email, status: 'failed', errorCode: 'invalid_domain', errorMessage: EMAIL_DOMAIN_MESSAGE });
     return error(res, 400, EMAIL_DOMAIN_MESSAGE, 'invalid_domain');
   }
 
-  if (!getEmailConfigStatus().configured) {
+  const emailStatus = getEmailConfigStatus();
+  if (!emailStatus.configured) {
     await logEmailConfigurationFailure({
       recipient: email,
       subject: 'Tchibo Benefit-Bar - Zugang aktivieren',
       emailType: 'activation_email',
     });
-    await logAuthEvent({ req, action: 'access_requested', email, status: 'failed', errorCode: 'email_not_configured', errorMessage: EMAIL_NOT_CONFIGURED_MESSAGE });
-    return error(res, 503, EMAIL_NOT_CONFIGURED_MESSAGE, 'email_not_configured');
+    await logAuthEvent({ req, action: 'access_requested', email, status: 'failed', errorCode: emailStatus.errorCode || 'email_not_configured', errorMessage: emailStatus.error || EMAIL_NOT_CONFIGURED_MESSAGE });
+    return error(res, 503, EMAIL_NOT_CONFIGURED_MESSAGE, emailStatus.errorCode || 'email_not_configured');
   }
 
   let employee;
   try {
     employee = await findEmployeeByEmail(email);
   } catch {
-    await logAuthEvent({ req, action: 'access_requested', email, status: 'failed', errorCode: 'user_not_found' });
-    return success(res, { message: ACCESS_NEUTRAL_MESSAGE });
+    const { firstName, lastName } = deriveNamesFromEmail(email);
+    const today = new Date().toISOString();
+    try {
+      employee = await pb.collection('employees').create({
+        email,
+        firstName,
+        lastName,
+        hireDate: today,
+        eligibleFrom: today,
+        status: 'active',
+        isAdmin: false,
+        authStatus: 'invited',
+        loginMethod: 'email_password',
+      });
+      await logAuthEvent({ req, action: 'access_user_auto_created', email, status: 'success' });
+    } catch (err) {
+      logger.error('Failed to auto-create employee for access request:', err);
+      await logAuthEvent({ req, action: 'access_user_create_failed', email, status: 'failed', errorCode: 'user_create_failed', errorMessage: err.message });
+      return error(res, 500, TECHNICAL_ACTION_MESSAGE, 'technical_error');
+    }
   }
 
   if (employee.status !== 'active' || employee.authStatus === 'locked') {
@@ -229,8 +250,9 @@ router.post('/request-access', async (req, res) => {
   const emailResult = await sendActivationEmail(employee, activationToken);
   if (!emailResult.success) {
     await logAuthEvent({ req, action: 'activation_link_failed', email, status: 'failed', errorCode: emailResult.code || 'email_send_failed', errorMessage: emailResult.error });
-    const message = emailResult.code === 'email_not_configured' ? EMAIL_NOT_CONFIGURED_MESSAGE : TECHNICAL_ACTION_MESSAGE;
-    return error(res, emailResult.code === 'email_not_configured' ? 503 : 500, message, emailResult.code || 'email_send_failed');
+    const isConfigError = isEmailConfigurationErrorCode(emailResult.code);
+    const message = isConfigError ? EMAIL_NOT_CONFIGURED_MESSAGE : TECHNICAL_ACTION_MESSAGE;
+    return error(res, isConfigError ? 503 : 500, message, emailResult.code || 'email_send_failed');
   }
 
   await logAuthEvent({ req, action: 'activation_link_sent', email, status: 'success' });
@@ -293,19 +315,20 @@ router.post('/forgot-password', async (req, res) => {
     return error(res, 400, 'Bitte gib deine E-Mail-Adresse ein.', 'missing_email');
   }
 
-  if (!validateEmailFormat(email) || !isEduschoEmail(email)) {
+  if (!validateEmailFormat(email) || !isAllowedLoginEmail(email)) {
     await logAuthEvent({ req, action: 'password_reset_requested', email, status: 'failed', errorCode: 'invalid_domain', errorMessage: EMAIL_DOMAIN_MESSAGE });
     return error(res, 400, EMAIL_DOMAIN_MESSAGE, 'invalid_domain');
   }
 
-  if (!getEmailConfigStatus().configured) {
+  const emailStatus = getEmailConfigStatus();
+  if (!emailStatus.configured) {
     await logEmailConfigurationFailure({
       recipient: email,
       subject: 'Tchibo Benefit-Bar - Passwort zurücksetzen',
       emailType: 'password_reset_email',
     });
-    await logAuthEvent({ req, action: 'password_reset_requested', email, status: 'failed', errorCode: 'email_not_configured', errorMessage: EMAIL_NOT_CONFIGURED_MESSAGE });
-    return error(res, 503, EMAIL_NOT_CONFIGURED_MESSAGE, 'email_not_configured');
+    await logAuthEvent({ req, action: 'password_reset_requested', email, status: 'failed', errorCode: emailStatus.errorCode || 'email_not_configured', errorMessage: emailStatus.error || EMAIL_NOT_CONFIGURED_MESSAGE });
+    return error(res, 503, EMAIL_NOT_CONFIGURED_MESSAGE, emailStatus.errorCode || 'email_not_configured');
   }
 
   let employee;
@@ -338,8 +361,9 @@ router.post('/forgot-password', async (req, res) => {
   const emailResult = await sendPasswordResetEmail(employee, resetToken);
   if (!emailResult.success) {
     await logAuthEvent({ req, action: 'password_reset_requested', email, status: 'failed', errorCode: emailResult.code || 'email_send_failed', errorMessage: emailResult.error });
-    const message = emailResult.code === 'email_not_configured' ? EMAIL_NOT_CONFIGURED_MESSAGE : TECHNICAL_ACTION_MESSAGE;
-    return error(res, emailResult.code === 'email_not_configured' ? 503 : 500, message, emailResult.code || 'email_send_failed');
+    const isConfigError = isEmailConfigurationErrorCode(emailResult.code);
+    const message = isConfigError ? EMAIL_NOT_CONFIGURED_MESSAGE : TECHNICAL_ACTION_MESSAGE;
+    return error(res, isConfigError ? 503 : 500, message, emailResult.code || 'email_send_failed');
   }
 
   await logAuthEvent({ req, action: 'password_reset_requested', email, status: 'success' });

@@ -23,7 +23,7 @@ const AccessDeniedPage = () => {
               Diese Anwendung ist nur für berechtigte Mitarbeitende von Tchibo/Eduscho Österreich freigegeben.
             </p>
             <p className="text-muted text-sm mb-6">
-              Bitte stellen Sie sicher, dass Sie mit Ihrer @eduscho.at E-Mail-Adresse angemeldet sind und Ihr Mitarbeitendenstatus aktiv ist.
+              Bitte stellen Sie sicher, dass Sie mit einer freigegebenen E-Mail-Adresse angemeldet sind und Ihr Mitarbeitendenstatus aktiv ist.
             </p>
             <Link to="/login">
               <Button className="bg-primary text-white hover:bg-primary/90">

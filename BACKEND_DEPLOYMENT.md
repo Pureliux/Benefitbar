@@ -31,6 +31,7 @@ FRONTEND_URL=https://tchibo-benefitbar.at
 CORS_ORIGIN=https://tchibo-benefitbar.at
 
 JWT_SECRET=CHANGE_ME_LONG_RANDOM_VALUE
+ALLOWED_LOGIN_EMAILS=amirtirana@outlook.de
 PB_ENCRYPTION_KEY=CHANGE_ME_LONG_RANDOM_VALUE
 PB_SUPERUSER_EMAIL=admin@example.com
 PB_SUPERUSER_PASSWORD=CHANGE_ME_STRONG_PASSWORD
@@ -44,6 +45,7 @@ SMTP_PORT=
 SMTP_USER=
 SMTP_PASSWORD=
 SMTP_FROM=
+SMTP_SECURE=true
 ```
 
 ## 3. Frontend mit Backend verbinden

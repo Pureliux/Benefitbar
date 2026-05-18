@@ -14,6 +14,7 @@ import { Users, Server, CheckCircle2, ShieldAlert, KeyRound, Trash2 } from 'luci
 import { format } from 'date-fns';
 import ErrorAlert from '@/components/ErrorAlert.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { isAllowedLoginEmail, loginEmailErrorMessage } from '@/lib/emailAccess';
 
 const AdminDashboard = () => {
   const { createUser } = useAuth();
@@ -90,8 +91,8 @@ const AdminDashboard = () => {
     if (!newUser.email || !newUser.firstName || !newUser.lastName) {
       return 'Bitte alle Pflichtfelder ausfüllen.';
     }
-    if (!newUser.email.toLowerCase().endsWith('@eduscho.at')) {
-      return 'E-Mail-Adresse ist ungültig.';
+    if (!isAllowedLoginEmail(newUser.email)) {
+      return loginEmailErrorMessage;
     }
     return validatePassword(newUser.password, newUser.confirmPassword);
   };
@@ -339,7 +340,7 @@ const AdminDashboard = () => {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-foreground mb-1">E-Mail * (@eduscho.at)</label>
+                      <label className="block text-xs font-medium text-foreground mb-1">E-Mail * (@eduscho.at oder freigegeben)</label>
                       <Input 
                         type="email" 
                         value={newUser.email} 

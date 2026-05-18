@@ -2,6 +2,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { isAllowedLoginEmail } from '@/lib/emailAccess';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { currentUser, employee, isAdmin, initialLoading } = useAuth();
@@ -22,7 +23,7 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
     return <Navigate to="/access-denied" replace />;
   }
 
-  if (!currentUser.email?.toLowerCase().endsWith('@eduscho.at')) {
+  if (!isAllowedLoginEmail(currentUser.email)) {
     return <Navigate to="/access-denied" replace />;
   }
 

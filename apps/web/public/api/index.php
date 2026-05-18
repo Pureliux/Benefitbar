@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-current-domain-mail-v19';
+const BENEFITBAR_API_VERSION = '2026-05-18-allowed-email-smtp-v20';
+const LOGIN_EMAIL_ERROR_MESSAGE = 'Bitte verwende deine @eduscho.at-Adresse oder eine freigegebene E-Mail-Adresse.';
 
 header('X-Content-Type-Options: nosniff');
 
@@ -412,6 +413,23 @@ function is_eduscho_email(string $email): bool
     return string_ends_with(normalize_email($email), '@eduscho.at');
 }
 
+function allowed_login_emails(): array
+{
+    $configured = config_value('ALLOWED_LOGIN_EMAILS', 'amirtirana@outlook.de');
+    $emails = array_map(function ($email) {
+        return normalize_email((string)$email);
+    }, explode(',', $configured));
+
+    return array_values(array_filter($emails));
+}
+
+function is_allowed_login_email(string $email): bool
+{
+    $normalized = normalize_email($email);
+    return filter_var($normalized, FILTER_VALIDATE_EMAIL)
+        && (is_eduscho_email($normalized) || in_array($normalized, allowed_login_emails(), true));
+}
+
 function validate_password_policy(string $password): ?string
 {
     if (strlen($password) < 10) {
@@ -469,7 +487,7 @@ function bootstrap_admin(): void
     $email = normalize_email(config_value('BOOTSTRAP_ADMIN_EMAIL'));
     $password = config_value('BOOTSTRAP_ADMIN_PASSWORD');
 
-    if (!$email || !$password || !is_eduscho_email($email)) {
+    if (!$email || !$password || !is_allowed_login_email($email)) {
         return;
     }
 
@@ -910,7 +928,7 @@ function email_configured(): bool
         return allow_php_mail() && native_mail_available();
     }
 
-    return smtp_config_error() === null || (allow_php_mail() && native_mail_available());
+    return smtp_config_error() === null;
 }
 
 function smtp_configured(): bool
@@ -925,7 +943,11 @@ function mail_transport(): string
         return $transport;
     }
 
-    return smtp_configured() ? 'smtp' : 'php';
+    if (smtp_configured()) {
+        return 'smtp';
+    }
+
+    return allow_php_mail() && native_mail_available() ? 'php' : 'smtp';
 }
 
 function smtp_config_error(): ?array
@@ -941,6 +963,15 @@ function smtp_config_error(): ?array
         return [
             'code' => 'email_not_configured',
             'message' => 'SMTP configuration missing: ' . implode(', ', $missing),
+        ];
+    }
+
+    $portValue = trim(config_value('SMTP_PORT'));
+    $port = (int)$portValue;
+    if (!ctype_digit($portValue) || $port <= 0 || $port > 65535) {
+        return [
+            'code' => 'smtp_port_invalid',
+            'message' => 'SMTP_PORT must be a valid port number.',
         ];
     }
 
@@ -965,6 +996,14 @@ function smtp_config_error(): ?array
         return [
             'code' => 'smtp_from_invalid',
             'message' => 'SMTP_FROM must contain a valid sender address.',
+        ];
+    }
+
+    $secure = strtolower(config_value('SMTP_SECURE'));
+    if ($secure !== '' && !in_array($secure, ['ssl', 'tls', 'true', 'false', '1', '0'], true)) {
+        return [
+            'code' => 'smtp_secure_invalid',
+            'message' => 'SMTP_SECURE must be ssl, tls, true, false, or empty.',
         ];
     }
 
@@ -1185,7 +1224,7 @@ function send_smtp(string $recipient, string $subject, string $html, array $atta
 
     smtp_command($socket, 'AUTH LOGIN', [334]);
     smtp_command($socket, base64_encode($user), [334]);
-    smtp_command($socket, base64_encode($password), [235, 503]);
+    smtp_command($socket, base64_encode($password), [235]);
     smtp_command($socket, 'MAIL FROM:<' . $envelopeSender . '>', [250]);
     smtp_command($socket, 'RCPT TO:<' . $recipient . '>', [250, 251]);
     smtp_command($socket, 'DATA', [354]);
@@ -1239,12 +1278,13 @@ function send_email(string $recipient, string $subject, string $html, string $ty
     }
 
     try {
-        if (mail_transport() === 'php') {
+        $transport = mail_transport();
+        if ($transport === 'php') {
             $deliveryDetail = send_native_mail($recipient, $subject, $html, $attachments);
-        } elseif (smtp_configured()) {
+        } elseif ($transport === 'smtp') {
             $deliveryDetail = send_smtp($recipient, $subject, $html, $attachments);
         } else {
-            $deliveryDetail = send_native_mail($recipient, $subject, $html, $attachments);
+            throw new RuntimeException('Mail transport is not configured.');
         }
         log_email($recipient, $subject, $type, 'sent', $deliveryDetail, $userId);
         return ['success' => true, 'deliveryDetail' => $deliveryDetail];
@@ -1277,6 +1317,8 @@ function public_email_failure(array $result): array
         'smtp_password_placeholder',
         'smtp_user_invalid',
         'smtp_from_invalid',
+        'smtp_port_invalid',
+        'smtp_secure_invalid',
         'smtp_auth_failed',
         'smtp_connection_failed',
         'smtp_tls_failed',
@@ -1366,9 +1408,9 @@ function handle_login(): void
     if (!$email || !$password) {
         json_response(['success' => false, 'error' => 'Bitte E-Mail-Adresse und Passwort eingeben.', 'errorCode' => 'missing_credentials'], 400);
     }
-    if (!is_eduscho_email($email)) {
+    if (!is_allowed_login_email($email)) {
         log_auth('login_failed', $email, 'failed', 'invalid_domain');
-        json_response(['success' => false, 'error' => 'Bitte verwende deine @eduscho.at-E-Mail-Adresse.', 'errorCode' => 'invalid_domain'], 400);
+        json_response(['success' => false, 'error' => LOGIN_EMAIL_ERROR_MESSAGE, 'errorCode' => 'invalid_domain'], 400);
     }
 
     $user = find_user_by_email($email);
@@ -1413,8 +1455,8 @@ function handle_request_access(): void
     if (!$email) {
         json_response(['success' => false, 'error' => 'Bitte gib deine E-Mail-Adresse ein.', 'errorCode' => 'missing_email'], 400);
     }
-    if (!is_eduscho_email($email)) {
-        json_response(['success' => false, 'error' => 'Bitte verwende deine @eduscho.at-E-Mail-Adresse.', 'errorCode' => 'invalid_domain'], 400);
+    if (!is_allowed_login_email($email)) {
+        json_response(['success' => false, 'error' => LOGIN_EMAIL_ERROR_MESSAGE, 'errorCode' => 'invalid_domain'], 400);
     }
 
     $user = find_user_by_email($email);
@@ -1465,8 +1507,8 @@ function handle_forgot_password(): void
     if (!$email) {
         json_response(['success' => false, 'error' => 'Bitte gib deine E-Mail-Adresse ein.', 'errorCode' => 'missing_email'], 400);
     }
-    if (!is_eduscho_email($email)) {
-        json_response(['success' => false, 'error' => 'Bitte verwende deine @eduscho.at-E-Mail-Adresse.', 'errorCode' => 'invalid_domain'], 400);
+    if (!is_allowed_login_email($email)) {
+        json_response(['success' => false, 'error' => LOGIN_EMAIL_ERROR_MESSAGE, 'errorCode' => 'invalid_domain'], 400);
     }
 
     $user = find_user_by_email($email);
@@ -1981,8 +2023,8 @@ function handle_admin_create_user(): void
     $password = (string)($body['password'] ?? '');
     $confirm = (string)($body['confirmPassword'] ?? $body['passwordConfirm'] ?? $password);
 
-    if (!$email || !is_eduscho_email($email)) {
-        json_response(['success' => false, 'error' => 'E-Mail-Adresse ist ungültig.', 'errorCode' => 'invalid_email'], 400);
+    if (!$email || !is_allowed_login_email($email)) {
+        json_response(['success' => false, 'error' => LOGIN_EMAIL_ERROR_MESSAGE, 'errorCode' => 'invalid_email'], 400);
     }
     if (!$password) {
         json_response(['success' => false, 'error' => 'Passwort fehlt.', 'errorCode' => 'missing_password'], 400);

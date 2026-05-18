@@ -111,6 +111,7 @@ function benefitbar_config(): array
         'DB_PASSWORD' => getenv('DB_PASSWORD') ?: getenv('MYSQL_PASSWORD') ?: '',
         'FRONTEND_URL' => getenv('FRONTEND_URL') ?: '',
         'JWT_SECRET' => getenv('JWT_SECRET') ?: '',
+        'ALLOWED_LOGIN_EMAILS' => getenv('ALLOWED_LOGIN_EMAILS') ?: 'amirtirana@outlook.de',
         'SETUP_KEY' => getenv('SETUP_KEY') ?: '',
         'BOOTSTRAP_ADMIN_EMAIL' => getenv('BOOTSTRAP_ADMIN_EMAIL') ?: '',
         'BOOTSTRAP_ADMIN_PASSWORD' => getenv('BOOTSTRAP_ADMIN_PASSWORD') ?: '',
@@ -123,7 +124,7 @@ function benefitbar_config(): array
         'SMTP_FROM' => getenv('SMTP_FROM') ?: '',
         'SMTP_SECURE' => getenv('SMTP_SECURE') ?: '',
         'ALLOW_PHP_MAIL' => getenv('ALLOW_PHP_MAIL') ?: 'false',
-        'MAIL_TRANSPORT' => getenv('MAIL_TRANSPORT') ?: '',
+        'MAIL_TRANSPORT' => getenv('MAIL_TRANSPORT') ?: 'smtp',
         'PHP_MAIL_FROM' => getenv('PHP_MAIL_FROM') ?: '',
         'HR_NOTIFICATION_EMAIL' => getenv('HR_NOTIFICATION_EMAIL') ?: 'prozessmanagement@eduscho.at',
     ];

@@ -7,6 +7,22 @@ import logger from './logger.js';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const SMTP_ENV_KEYS = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD', 'SMTP_FROM'];
+const SMTP_PASSWORD_PLACEHOLDERS = [
+  'DAS_PASSWORT_DEINES_HOSTINGER_E_MAIL_KONTOS',
+  'DEIN_HOSTINGER',
+  'CHANGE_ME',
+  'HIER_DAS_ECHTE_PASSWORT',
+];
+const EMAIL_CONFIGURATION_ERROR_CODES = [
+  'email_not_configured',
+  'smtp_password_placeholder',
+  'smtp_user_invalid',
+  'smtp_from_invalid',
+  'smtp_port_invalid',
+  'smtp_auth_failed',
+  'smtp_connection_failed',
+  'smtp_tls_failed',
+];
 
 function cleanRecord(record) {
   return Object.fromEntries(
@@ -52,15 +68,46 @@ function getConfig() {
 
 export function getEmailConfigStatus() {
   const variables = Object.fromEntries(SMTP_ENV_KEYS.map((key) => [key, Boolean(process.env[key])]));
-  const portValid = Number.isInteger(Number(process.env.SMTP_PORT)) && Number(process.env.SMTP_PORT) > 0;
+  const port = Number(process.env.SMTP_PORT);
+  const portValid = Number.isInteger(port) && port > 0 && port <= 65535;
+  const password = process.env.SMTP_PASSWORD || '';
+  const passwordPlaceholder = SMTP_PASSWORD_PLACEHOLDERS.some((placeholder) => password.toLowerCase().includes(placeholder.toLowerCase()));
+  const smtpUserValid = Boolean(process.env.SMTP_USER && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(process.env.SMTP_USER));
+  const smtpFromValid = Boolean(process.env.SMTP_FROM && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(extractEmailAddress(process.env.SMTP_FROM)));
+  const missingKeys = SMTP_ENV_KEYS.filter((key) => !process.env[key]);
+  const configured = missingKeys.length === 0 &&
+    portValid &&
+    !passwordPlaceholder &&
+    smtpUserValid &&
+    smtpFromValid;
+  const failures = [
+    missingKeys.length > 0 && {
+      code: 'email_not_configured',
+      message: `SMTP configuration missing: ${missingKeys.join(', ')}`,
+    },
+    !portValid && { code: 'smtp_port_invalid', message: 'SMTP_PORT is invalid' },
+    passwordPlaceholder && { code: 'smtp_password_placeholder', message: 'SMTP_PASSWORD still contains a placeholder' },
+    !smtpUserValid && { code: 'smtp_user_invalid', message: 'SMTP_USER must be the full mailbox address' },
+    !smtpFromValid && { code: 'smtp_from_invalid', message: 'SMTP_FROM must contain a valid sender address' },
+  ].filter(Boolean);
+  const firstFailure = configured ? null : failures[0];
 
   return {
-    configured: SMTP_ENV_KEYS.every((key) => Boolean(process.env[key])) && portValid,
+    configured,
+    error: firstFailure?.message || null,
+    errorCode: firstFailure?.code || null,
     variables: {
       ...variables,
       SMTP_PORT_VALID: portValid,
+      SMTP_PASSWORD_PLACEHOLDER: passwordPlaceholder,
+      SMTP_USER_VALID: smtpUserValid,
+      SMTP_FROM_VALID: smtpFromValid,
     },
   };
+}
+
+export function isEmailConfigurationErrorCode(code) {
+  return EMAIL_CONFIGURATION_ERROR_CODES.includes(code);
 }
 
 async function logEmail({ recipient, subject, emailType, status, errorMessage, relatedUserId }) {
@@ -80,10 +127,7 @@ async function logEmail({ recipient, subject, emailType, status, errorMessage, r
 }
 
 export async function logEmailConfigurationFailure({ recipient, subject, emailType, relatedUserId }) {
-  const missing = SMTP_ENV_KEYS.filter((key) => !process.env[key]);
-  const errorMessage = missing.length
-    ? `SMTP configuration missing: ${missing.join(', ')}`
-    : 'SMTP_PORT is invalid';
+  const errorMessage = getEmailConfigStatus().error || 'SMTP configuration is invalid';
   await logEmail({
     recipient,
     subject,
@@ -176,7 +220,7 @@ async function upgradeToTls(socket, config) {
 async function authenticate(socket, config) {
   const plainToken = Buffer.from(`\0${config.user}\0${config.password}`, 'utf8').toString('base64');
   try {
-    await command(socket, `AUTH PLAIN ${plainToken}`, [235, 503]);
+    await command(socket, `AUTH PLAIN ${plainToken}`, [235]);
     return;
   } catch (plainError) {
     logger.warn('SMTP AUTH PLAIN failed, trying AUTH LOGIN:', plainError?.message || plainError);
@@ -184,7 +228,7 @@ async function authenticate(socket, config) {
 
   await command(socket, 'AUTH LOGIN', [334]);
   await command(socket, Buffer.from(config.user, 'utf8').toString('base64'), [334]);
-  await command(socket, Buffer.from(config.password, 'utf8').toString('base64'), [235, 503]);
+  await command(socket, Buffer.from(config.password, 'utf8').toString('base64'), [235]);
 }
 
 function buildMessage({ from, to, subject, html }) {
@@ -236,12 +280,9 @@ async function sendEmail({ recipient, subject, html, emailType, relatedUserId })
   const configStatus = getEmailConfigStatus();
 
   if (!configStatus.configured) {
-    const missing = SMTP_ENV_KEYS.filter((key) => !process.env[key]);
-    const errorMessage = missing.length
-      ? `SMTP configuration missing: ${missing.join(', ')}`
-      : 'SMTP_PORT is invalid';
+    const errorMessage = configStatus.error || 'SMTP configuration is invalid';
     await logEmail({ recipient, subject, emailType, relatedUserId, status: 'failed', errorMessage });
-    return { success: false, code: 'email_not_configured', error: errorMessage };
+    return { success: false, code: configStatus.errorCode || 'email_not_configured', error: errorMessage };
   }
 
   try {
@@ -253,8 +294,22 @@ async function sendEmail({ recipient, subject, html, emailType, relatedUserId })
     const errorMessage = error?.message || String(error);
     await logEmail({ recipient, subject, emailType, relatedUserId, status: 'failed', errorMessage });
     logger.error(`Failed to send ${emailType} to ${recipient}:`, errorMessage);
-    return { success: false, code: 'email_send_failed', error: errorMessage };
+    return { success: false, code: classifyEmailSendError(errorMessage), error: errorMessage };
   }
+}
+
+function classifyEmailSendError(message) {
+  const lower = String(message || '').toLowerCase();
+  if (lower.includes('smtp command failed (535') || lower.includes('authentication') || lower.includes('auth')) {
+    return 'smtp_auth_failed';
+  }
+  if (lower.includes('connection failed') || lower.includes('timed out') || lower.includes('network')) {
+    return 'smtp_connection_failed';
+  }
+  if (lower.includes('starttls') || lower.includes('crypto') || lower.includes('certificate')) {
+    return 'smtp_tls_failed';
+  }
+  return 'email_send_failed';
 }
 
 export async function sendActivationEmail(user, token) {

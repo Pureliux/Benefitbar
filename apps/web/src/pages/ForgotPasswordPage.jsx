@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import Header from '@/components/Header.jsx';
 import ErrorAlert from '@/components/ErrorAlert.jsx';
 import { CheckCircle2 } from 'lucide-react';
+import { validateAllowedLoginEmail } from '@/lib/emailAccess';
 
 const neutralResetMessage = 'Falls für diese Adresse ein aktiver Zugang besteht, wurde eine E-Mail zum Zurücksetzen des Passworts versendet.';
 
@@ -17,20 +18,12 @@ const ForgotPasswordPage = () => {
   const [errorMsg, setErrorMsg] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
-  const validateEmailDomain = (value) => {
-    if (!value) return 'Bitte gib deine E-Mail-Adresse ein.';
-    if (!value.toLowerCase().trim().endsWith('@eduscho.at')) {
-      return 'Bitte verwende deine @eduscho.at-E-Mail-Adresse.';
-    }
-    return null;
-  };
-
   const handleRequestReset = async (e) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    const emailError = validateEmailDomain(email);
+    const emailError = validateAllowedLoginEmail(email);
     if (emailError) {
       setErrorMsg(emailError);
       return;

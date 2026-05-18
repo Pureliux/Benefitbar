@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Header from '@/components/Header.jsx';
 import ErrorAlert from '@/components/ErrorAlert.jsx';
+import { validateAllowedLoginEmail } from '@/lib/emailAccess';
 
 const accessSuccessMessage = 'Falls für diese E-Mail-Adresse ein aktiver Zugang besteht, wurde eine E-Mail mit weiteren Schritten versendet.';
 
@@ -98,14 +99,6 @@ const LoginPage = () => {
     setSuccessMsg(null);
   };
 
-  const validateEduschoEmail = (email, emptyMessage) => {
-    if (!email) return emptyMessage;
-    if (!email.toLowerCase().trim().endsWith('@eduscho.at')) {
-      return 'Bitte verwende deine @eduscho.at-E-Mail-Adresse.';
-    }
-    return null;
-  };
-
   const handleLogin = async (e) => {
     e.preventDefault();
     clearMessages();
@@ -115,7 +108,7 @@ const LoginPage = () => {
       return;
     }
 
-    const emailError = validateEduschoEmail(loginEmail, 'Bitte E-Mail-Adresse und Passwort eingeben.');
+    const emailError = validateAllowedLoginEmail(loginEmail, 'Bitte E-Mail-Adresse und Passwort eingeben.');
     if (emailError) {
       setErrorMsg(emailError);
       return;
@@ -137,7 +130,7 @@ const LoginPage = () => {
     e.preventDefault();
     clearMessages();
 
-    const emailError = validateEduschoEmail(signupEmail, 'Bitte gib deine E-Mail-Adresse ein.');
+    const emailError = validateAllowedLoginEmail(signupEmail, 'Bitte gib deine E-Mail-Adresse ein.');
     if (emailError) {
       setErrorMsg(emailError);
       return;

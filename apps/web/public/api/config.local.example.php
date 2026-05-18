@@ -8,6 +8,7 @@ return [
 
     'FRONTEND_URL' => 'https://tchibo-benefitbar.at',
     'JWT_SECRET' => 'CHANGE_ME_LONG_RANDOM_VALUE',
+    'ALLOWED_LOGIN_EMAILS' => 'amirtirana@outlook.de',
     'SETUP_KEY' => 'CHANGE_ME_SETUP_KEY',
 
     'BOOTSTRAP_ADMIN_EMAIL' => 'admin@eduscho.at',

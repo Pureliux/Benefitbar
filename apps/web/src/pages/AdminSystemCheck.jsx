@@ -22,7 +22,7 @@ const AdminSystemCheck = () => {
   const [resendEmail, setResendEmail] = useState('');
   const [isResending, setIsResending] = useState(false);
   const [isCreatingTest, setIsCreatingTest] = useState(false);
-  const [testLoginEmail, setTestLoginEmail] = useState('test@eduscho.at');
+  const [testLoginEmail, setTestLoginEmail] = useState('amirtirana@outlook.de');
   const [testLoginPassword, setTestLoginPassword] = useState('');
   const [isCheckingLogin, setIsCheckingLogin] = useState(false);
   
@@ -263,7 +263,7 @@ const AdminSystemCheck = () => {
                     <label className="text-sm font-medium text-foreground">Test-E-Mail senden</label>
                     <div className="flex gap-2">
                       <Input 
-                        placeholder="test@eduscho.at" 
+                        placeholder="amirtirana@outlook.de"
                         value={testEmail} 
                         onChange={e => setTestEmail(e.target.value)} 
                         className="bg-background"
@@ -293,7 +293,7 @@ const AdminSystemCheck = () => {
                     <div className="space-y-3">
                       <label className="text-sm font-medium text-foreground">Test-User / Test-Login</label>
                       <Input
-                        placeholder="test@eduscho.at"
+                        placeholder="amirtirana@outlook.de"
                         value={testLoginEmail}
                         onChange={e => setTestLoginEmail(e.target.value)}
                         className="bg-background"

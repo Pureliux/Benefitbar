@@ -13,10 +13,12 @@ import {
 } from '../utils/tokenUtils.js';
 import {
   getEmailConfigStatus,
+  isEmailConfigurationErrorCode,
   logEmailConfigurationFailure,
   sendActivationEmail,
   sendTestEmail,
 } from '../utils/emailService.js';
+import { isAllowedLoginEmail } from '../utils/emailAccess.js';
 
 const router = express.Router();
 const TOKEN_EXPIRY_HOURS = 24;
@@ -30,10 +32,6 @@ function cleanRecord(record) {
 
 function jsonError(res, status, error, errorCode) {
   return res.status(status).json({ success: false, error, errorCode });
-}
-
-function isEduschoEmail(email) {
-  return normalizeEmail(email).endsWith('@eduscho.at');
 }
 
 async function requireAdmin(req, res, next) {
@@ -97,7 +95,7 @@ router.post('/create-user', async (req, res) => {
     return jsonError(res, 400, 'Passwort fehlt.', 'missing_password');
   }
 
-  if (!email || !validateEmailFormat(email) || !isEduschoEmail(email)) {
+  if (!email || !validateEmailFormat(email) || !isAllowedLoginEmail(email)) {
     return jsonError(res, 400, 'E-Mail-Adresse ist ungültig.', 'invalid_email');
   }
 
@@ -183,6 +181,7 @@ router.get('/system-check', async (req, res) => {
     databaseConnected,
     authSystemActive: databaseConnected && isSessionConfigured(),
     emailServiceConfigured: emailStatus.configured,
+    smtpConfigError: emailStatus.error,
     smtp: emailStatus.variables,
     authProvider: 'email_password',
     activeUserCount: activeUsers.length,
@@ -203,7 +202,7 @@ router.post('/send-test-email', async (req, res) => {
   const emailResult = await sendTestEmail(email);
   if (!emailResult.success) {
     await logAuthEvent({ req, action: 'test_email_failed', email, status: 'failed', errorCode: emailResult.code || 'email_send_failed', errorMessage: emailResult.error });
-    return jsonError(res, 500, 'Test-E-Mail konnte nicht versendet werden. Bitte E-Mail-Konfiguration prüfen.', emailResult.code || 'email_send_failed');
+    return jsonError(res, isEmailConfigurationErrorCode(emailResult.code) ? 503 : 500, 'Test-E-Mail konnte nicht versendet werden. Bitte E-Mail-Konfiguration prüfen.', emailResult.code || 'email_send_failed');
   }
 
   await logAuthEvent({ req, action: 'test_email_sent', email, status: 'success' });
@@ -213,18 +212,19 @@ router.post('/send-test-email', async (req, res) => {
 router.post('/resend-activation-link', async (req, res) => {
   const email = normalizeEmail(req.body.email);
 
-  if (!email || !validateEmailFormat(email) || !isEduschoEmail(email)) {
+  if (!email || !validateEmailFormat(email) || !isAllowedLoginEmail(email)) {
     return jsonError(res, 400, 'E-Mail-Adresse ist ungültig.', 'invalid_email');
   }
 
-  if (!getEmailConfigStatus().configured) {
+  const emailStatus = getEmailConfigStatus();
+  if (!emailStatus.configured) {
     await logEmailConfigurationFailure({
       recipient: email,
       subject: 'Tchibo Benefit-Bar - Zugang aktivieren',
       emailType: 'activation_email',
     });
-    await logAuthEvent({ req, action: 'activation_link_failed', email, status: 'failed', errorCode: 'email_not_configured', errorMessage: EMAIL_NOT_CONFIGURED_MESSAGE });
-    return jsonError(res, 503, EMAIL_NOT_CONFIGURED_MESSAGE, 'email_not_configured');
+    await logAuthEvent({ req, action: 'activation_link_failed', email, status: 'failed', errorCode: emailStatus.errorCode || 'email_not_configured', errorMessage: emailStatus.error || EMAIL_NOT_CONFIGURED_MESSAGE });
+    return jsonError(res, 503, EMAIL_NOT_CONFIGURED_MESSAGE, emailStatus.errorCode || 'email_not_configured');
   }
 
   let employee;
@@ -250,7 +250,7 @@ router.post('/resend-activation-link', async (req, res) => {
   const emailResult = await sendActivationEmail(employee, activationToken);
   if (!emailResult.success) {
     await logAuthEvent({ req, action: 'activation_link_failed', email, status: 'failed', errorCode: emailResult.code || 'email_send_failed', errorMessage: emailResult.error });
-    return jsonError(res, 500, 'Aktivierungslink konnte nicht versendet werden.', emailResult.code || 'email_send_failed');
+    return jsonError(res, isEmailConfigurationErrorCode(emailResult.code) ? 503 : 500, 'Aktivierungslink konnte nicht versendet werden.', emailResult.code || 'email_send_failed');
   }
 
   await logAuthEvent({ req, action: 'activation_link_sent', email, status: 'success' });

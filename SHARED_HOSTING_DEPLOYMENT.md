@@ -52,6 +52,7 @@ return [
 
     'FRONTEND_URL' => 'https://tchibo-benefitbar.at',
     'JWT_SECRET' => 'LANGER_ZUFALLSWERT',
+    'ALLOWED_LOGIN_EMAILS' => 'amirtirana@outlook.de',
     'SETUP_KEY' => 'LANGER_SETUP_ZUFALLSWERT',
 
     'BOOTSTRAP_ADMIN_EMAIL' => 'deine.admin@eduscho.at',
@@ -59,16 +60,21 @@ return [
     'BOOTSTRAP_ADMIN_FIRST_NAME' => 'Admin',
     'BOOTSTRAP_ADMIN_LAST_NAME' => 'Benefit-Bar',
 
-    'SMTP_HOST' => '',
-    'SMTP_PORT' => '',
-    'SMTP_USER' => '',
-    'SMTP_PASSWORD' => '',
-    'SMTP_FROM' => '',
-    'SMTP_SECURE' => '',
+    'SMTP_HOST' => 'smtp.hostinger.com',
+    'SMTP_PORT' => '465',
+    'SMTP_USER' => 'no-reply@tchibo-benefitbar.at',
+    'SMTP_PASSWORD' => 'ECHTES_HOSTINGER_MAILBOX_PASSWORT',
+    'SMTP_FROM' => 'Tchibo Benefitbar <no-reply@tchibo-benefitbar.at>',
+    'SMTP_SECURE' => 'ssl',
+    'ALLOW_PHP_MAIL' => 'false',
+    'MAIL_TRANSPORT' => 'smtp',
+    'PHP_MAIL_FROM' => 'Tchibo Benefitbar <no-reply@tchibo-benefitbar.at>',
 ];
 ```
 
 Die Datei `benefitbar.config.php` wird nicht ins Git geschrieben.
+
+Wichtig: Der Aktivierungslink wird nur als erfolgreich angezeigt, wenn der SMTP-Server die Nachricht annimmt. `MAIL_TRANSPORT` muss auf `smtp` stehen; `ALLOW_PHP_MAIL` sollte auf `false` bleiben, damit Hostinger `mail()` nicht versehentlich als scheinbarer Versand genutzt wird.
 
 ## 3. Frontend neu deployen
 
