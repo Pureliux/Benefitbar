@@ -168,6 +168,7 @@ const AdminSystemCheck = () => {
   const StatusIcon = ({ status }) => status ? 
     <CheckCircle2 className="h-5 w-5 text-success inline-block mr-2" /> : 
     <XCircle className="h-5 w-5 text-destructive inline-block mr-2" />;
+  const emailLogs = stats?.recentEmailLogs || stats?.recentEmailErrors || [];
 
   return (
     <>
@@ -349,28 +350,34 @@ const AdminSystemCheck = () => {
             </div>
           )}
 
-          {showEmailLogs && stats?.recentEmailErrors && (
+          {showEmailLogs && (
             <div className="bg-card border border-border shadow-sm rounded-2xl p-6 animate-in fade-in slide-in-from-top-4">
-              <h2 className="text-xl font-semibold text-card-foreground mb-4">Letzte 10 E-Mail Fehler (emailLog)</h2>
+              <h2 className="text-xl font-semibold text-card-foreground mb-4">Letzte 10 E-Mail-Logs (emailLog)</h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="text-muted-foreground border-b border-border">
                     <tr>
                       <th className="py-3 px-4 font-medium">Zeit</th>
                       <th className="py-3 px-4 font-medium">Empfänger</th>
-                      <th className="py-3 px-4 font-medium">Fehlermeldung</th>
+                      <th className="py-3 px-4 font-medium">Typ</th>
+                      <th className="py-3 px-4 font-medium">Status</th>
+                      <th className="py-3 px-4 font-medium">Details</th>
                     </tr>
                   </thead>
                   <tbody className="text-foreground">
-                    {stats.recentEmailErrors.map((log, i) => (
+                    {emailLogs.map((log, i) => (
                       <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/30">
-                        <td className="py-3 px-4 text-muted-foreground whitespace-nowrap">{formatDateTime(log.sentAt)}</td>
+                        <td className="py-3 px-4 text-muted-foreground whitespace-nowrap">{formatDateTime(log.sentAt || log.createdAt)}</td>
                         <td className="py-3 px-4">{log.recipient}</td>
-                        <td className="py-3 px-4 text-destructive">{log.errorMessage || 'Unbekannt'}</td>
+                        <td className="py-3 px-4">{log.emailType || '-'}</td>
+                        <td className={`py-3 px-4 font-semibold ${log.status === 'sent' ? 'text-success' : 'text-destructive'}`}>
+                          {log.status || 'failed'}
+                        </td>
+                        <td className="py-3 px-4">{log.errorMessage || log.subject || '-'}</td>
                       </tr>
                     ))}
-                    {stats.recentEmailErrors.length === 0 && (
-                      <tr><td colSpan="3" className="py-6 text-center text-muted-foreground">Keine Fehler gefunden.</td></tr>
+                    {emailLogs.length === 0 && (
+                      <tr><td colSpan="5" className="py-6 text-center text-muted-foreground">Keine E-Mail-Logs gefunden.</td></tr>
                     )}
                   </tbody>
                 </table>

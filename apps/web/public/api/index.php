@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-auto-access-email-logs-v16';
+const BENEFITBAR_API_VERSION = '2026-05-18-smtp-delivery-diagnostics-v17';
 
 header('X-Content-Type-Options: nosniff');
 
@@ -994,19 +994,58 @@ function sanitize_email_header(string $value): string
     return trim(str_replace(["\r", "\n"], '', $value));
 }
 
+function html_to_text(string $html): string
+{
+    $text = preg_replace('#<(br|/p|/div|/li)\b[^>]*>#i', "\n", $html);
+    $text = strip_tags((string)$text);
+    $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $text = preg_replace("/[ \t]+/", ' ', $text);
+    $text = preg_replace("/\n{3,}/", "\n\n", (string)$text);
+    return trim((string)$text);
+}
+
+function normalize_crlf(string $value): string
+{
+    return preg_replace("/\r\n|\r|\n/", "\r\n", $value) ?? $value;
+}
+
+function smtp_dot_stuff(string $value): string
+{
+    return preg_replace('/^\./m', '..', $value) ?? $value;
+}
+
 function build_email_body(string $html, array $attachments, string &$contentType): string
 {
+    $text = html_to_text($html);
+
     if (!$attachments) {
-        $contentType = 'text/html; charset=UTF-8';
-        return $html;
+        $boundary = '=_Benefitbar_Alt_' . bin2hex(random_bytes(12));
+        $contentType = 'multipart/alternative; boundary="' . $boundary . '"';
+        return "--{$boundary}\r\n"
+            . "Content-Type: text/plain; charset=UTF-8\r\n"
+            . "Content-Transfer-Encoding: 8bit\r\n\r\n"
+            . $text . "\r\n"
+            . "--{$boundary}\r\n"
+            . "Content-Type: text/html; charset=UTF-8\r\n"
+            . "Content-Transfer-Encoding: 8bit\r\n\r\n"
+            . $html . "\r\n"
+            . "--{$boundary}--\r\n";
     }
 
     $boundary = '=_Benefitbar_' . bin2hex(random_bytes(12));
+    $altBoundary = '=_Benefitbar_Alt_' . bin2hex(random_bytes(12));
     $contentType = 'multipart/mixed; boundary="' . $boundary . '"';
     $body = "--{$boundary}\r\n"
+        . "Content-Type: multipart/alternative; boundary=\"{$altBoundary}\"\r\n\r\n"
+        . "--{$altBoundary}\r\n"
+        . "Content-Type: text/plain; charset=UTF-8\r\n"
+        . "Content-Transfer-Encoding: 8bit\r\n\r\n"
+        . $text . "\r\n"
+        . "--{$altBoundary}\r\n"
         . "Content-Type: text/html; charset=UTF-8\r\n"
         . "Content-Transfer-Encoding: 8bit\r\n\r\n"
-        . $html . "\r\n";
+        . $html . "\r\n"
+        . "--{$altBoundary}--\r\n";
 
     foreach ($attachments as $attachment) {
         $path = (string)($attachment['path'] ?? '');
@@ -1031,7 +1070,7 @@ function build_email_body(string $html, array $attachments, string &$contentType
     return $body . "--{$boundary}--\r\n";
 }
 
-function send_native_mail(string $recipient, string $subject, string $html, array $attachments = []): void
+function send_native_mail(string $recipient, string $subject, string $html, array $attachments = []): string
 {
     if (!native_mail_available()) {
         throw new RuntimeException('PHP mail() is not available on this hosting plan');
@@ -1057,6 +1096,8 @@ function send_native_mail(string $recipient, string $subject, string $html, arra
     if (!$sent) {
         throw new RuntimeException('PHP mail() returned false');
     }
+
+    return 'PHP mail accepted the message for local delivery.';
 }
 
 function smtp_read($socket): string
@@ -1082,7 +1123,7 @@ function smtp_command($socket, string $command, array $expected): string
     return $response;
 }
 
-function send_smtp(string $recipient, string $subject, string $html, array $attachments = []): void
+function send_smtp(string $recipient, string $subject, string $html, array $attachments = []): string
 {
     $host = config_value('SMTP_HOST');
     $port = (int)config_value('SMTP_PORT');
@@ -1091,6 +1132,8 @@ function send_smtp(string $recipient, string $subject, string $html, array $atta
     $user = config_value('SMTP_USER');
     $password = config_value('SMTP_PASSWORD');
 
+    $frontendHost = parse_url(config_value('FRONTEND_URL'), PHP_URL_HOST) ?: 'tchibo-benefitbar.at';
+    $envelopeSender = filter_var($user, FILTER_VALIDATE_EMAIL) ? $user : email_address($from);
     $remote = ($secure === 'ssl' || $port === 465 ? 'ssl://' : '') . $host . ':' . $port;
     $socket = stream_socket_client($remote, $errno, $errstr, 20, STREAM_CLIENT_CONNECT);
     if (!$socket) {
@@ -1099,20 +1142,20 @@ function send_smtp(string $recipient, string $subject, string $html, array $atta
 
     stream_set_timeout($socket, 20);
     smtp_read($socket);
-    $ehlo = smtp_command($socket, 'EHLO ' . $host, [250]);
+    $ehlo = smtp_command($socket, 'EHLO ' . $frontendHost, [250]);
 
     if (($secure === 'tls' || (!$secure && stripos($ehlo, 'STARTTLS') !== false)) && $port !== 465) {
         smtp_command($socket, 'STARTTLS', [220]);
         if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
             throw new RuntimeException('SMTP STARTTLS failed');
         }
-        smtp_command($socket, 'EHLO ' . $host, [250]);
+        smtp_command($socket, 'EHLO ' . $frontendHost, [250]);
     }
 
     smtp_command($socket, 'AUTH LOGIN', [334]);
     smtp_command($socket, base64_encode($user), [334]);
     smtp_command($socket, base64_encode($password), [235, 503]);
-    smtp_command($socket, 'MAIL FROM:<' . email_address($from) . '>', [250]);
+    smtp_command($socket, 'MAIL FROM:<' . $envelopeSender . '>', [250]);
     smtp_command($socket, 'RCPT TO:<' . $recipient . '>', [250, 251]);
     smtp_command($socket, 'DATA', [354]);
 
@@ -1120,20 +1163,28 @@ function send_smtp(string $recipient, string $subject, string $html, array $atta
     $body = build_email_body($html, $attachments, $contentType);
     $headers = [
         'From: ' . $from,
+        'Sender: ' . $envelopeSender,
+        'Reply-To: ' . $envelopeSender,
+        'Return-Path: <' . $envelopeSender . '>',
         'To: ' . $recipient,
         'Subject: =?UTF-8?B?' . base64_encode($subject) . '?=',
         'MIME-Version: 1.0',
         'Content-Type: ' . $contentType,
         'Date: ' . gmdate('r'),
-        'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . (parse_url(config_value('FRONTEND_URL'), PHP_URL_HOST) ?: 'tchibo-benefitbar.at') . '>',
+        'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . $frontendHost . '>',
+        'Auto-Submitted: auto-generated',
+        'X-Auto-Response-Suppress: All',
     ];
-    fwrite($socket, implode("\r\n", $headers) . "\r\n\r\n" . str_replace("\n.", "\n..", $body) . "\r\n.\r\n");
+    $message = normalize_crlf(implode("\r\n", $headers) . "\r\n\r\n" . $body);
+    fwrite($socket, rtrim(smtp_dot_stuff($message), "\r\n") . "\r\n.\r\n");
     $response = smtp_read($socket);
     if ((int)substr($response, 0, 3) !== 250) {
         throw new RuntimeException('SMTP DATA failed: ' . $response);
     }
     smtp_command($socket, 'QUIT', [221, 250]);
     fclose($socket);
+
+    return 'SMTP accepted message: ' . trim(str_replace(["\r", "\n"], ' ', $response));
 }
 
 function email_address(string $value): string
@@ -1156,12 +1207,12 @@ function send_email(string $recipient, string $subject, string $html, string $ty
 
     try {
         if (smtp_configured()) {
-            send_smtp($recipient, $subject, $html, $attachments);
+            $deliveryDetail = send_smtp($recipient, $subject, $html, $attachments);
         } else {
-            send_native_mail($recipient, $subject, $html, $attachments);
+            $deliveryDetail = send_native_mail($recipient, $subject, $html, $attachments);
         }
-        log_email($recipient, $subject, $type, 'sent', null, $userId);
-        return ['success' => true];
+        log_email($recipient, $subject, $type, 'sent', $deliveryDetail, $userId);
+        return ['success' => true, 'deliveryDetail' => $deliveryDetail];
     } catch (Throwable $error) {
         log_email($recipient, $subject, $type, 'failed', $error->getMessage(), $userId);
         return ['success' => false, 'code' => classify_email_send_error($error->getMessage()), 'error' => $error->getMessage()];
