@@ -210,8 +210,13 @@ const AdminSystemCheck = () => {
                     <span className="text-muted-foreground flex items-center gap-2"><Mail className="h-4 w-4"/> E-Mail-Service konfiguriert</span>
                     <span><StatusIcon status={stats.emailServiceConfigured} /></span>
                   </div>
+                  {stats.smtpConfigError && (
+                    <div className="rounded-lg border border-destructive/25 bg-destructive/10 p-3 text-sm text-destructive">
+                      {stats.smtpConfigError}
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    {['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD', 'SMTP_FROM'].map((key) => (
+                    {['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD', 'SMTP_FROM', 'SMTP_SECURE'].map((key) => (
                       <div key={key} className="flex justify-between items-center p-2 bg-background border border-border rounded">
                         <span className="text-muted-foreground">{key} vorhanden</span>
                         <StatusIcon status={Boolean(stats.smtp?.[key])} />

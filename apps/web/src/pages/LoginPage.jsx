@@ -71,12 +71,14 @@ function BenefitImageCard({ card, compact = false }) {
       }
       aria-hidden="true"
     >
-      <div className="absolute left-1/2 top-0 z-20 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+      <div className="absolute left-1/2 top-[-0.35rem] z-20 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+        <span className="absolute left-1/2 top-3 z-0 h-8 w-[2px] -translate-x-1/2 rotate-12 rounded-full bg-[#111111] shadow-[0_0.2rem_0.35rem_rgba(0,0,0,0.35)]" />
         <span
-          className="h-5 w-5 rounded-full border-2 border-white shadow-[0_0.45rem_0.9rem_rgba(34,34,34,0.28),inset_0_0.2rem_0.35rem_rgba(255,255,255,0.45)]"
+          className="relative z-10 h-6 w-6 rounded-full border-2 border-white shadow-[0_0.55rem_1rem_rgba(34,34,34,0.32),inset_0_0.2rem_0.35rem_rgba(255,255,255,0.55),inset_0_-0.2rem_0.35rem_rgba(0,0,0,0.18)]"
           style={{ backgroundColor: card.pinColor || '#C0A468' }}
-        />
-        <span className="absolute top-[1.05rem] h-3 w-1 rounded-full bg-black/20 blur-[1px]" />
+        >
+          <span className="absolute left-1.5 top-1 h-2 w-2 rounded-full bg-white/70 blur-[0.5px]" />
+        </span>
       </div>
       <div className="relative h-full w-full overflow-hidden rounded-[2px]">
         <img

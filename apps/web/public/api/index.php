@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-smtp-required-v12';
+const BENEFITBAR_API_VERSION = '2026-05-18-smtp-diagnostics-v13';
 
 header('X-Content-Type-Options: nosniff');
 
@@ -904,12 +904,55 @@ function require_admin(): array
 
 function email_configured(): bool
 {
-    return smtp_configured() || (allow_php_mail() && native_mail_available());
+    return smtp_config_error() === null || (allow_php_mail() && native_mail_available());
 }
 
 function smtp_configured(): bool
 {
-    return config_value('SMTP_HOST') && config_value('SMTP_PORT') && config_value('SMTP_USER') && config_value('SMTP_PASSWORD') && config_value('SMTP_FROM');
+    return smtp_config_error() === null;
+}
+
+function smtp_config_error(): ?array
+{
+    $missing = [];
+    foreach (['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD', 'SMTP_FROM'] as $key) {
+        if (trim(config_value($key)) === '') {
+            $missing[] = $key;
+        }
+    }
+
+    if ($missing) {
+        return [
+            'code' => 'email_not_configured',
+            'message' => 'SMTP configuration missing: ' . implode(', ', $missing),
+        ];
+    }
+
+    $password = config_value('SMTP_PASSWORD');
+    foreach (['DAS_PASSWORT_DEINES_HOSTINGER_E_MAIL_KONTOS', 'DEIN_HOSTINGER', 'CHANGE_ME', 'HIER_DAS_ECHTE_PASSWORT'] as $placeholder) {
+        if (stripos($password, $placeholder) !== false) {
+            return [
+                'code' => 'smtp_password_placeholder',
+                'message' => 'SMTP_PASSWORD still contains a placeholder. Use the real password of the Hostinger mailbox.',
+            ];
+        }
+    }
+
+    if (!filter_var(config_value('SMTP_USER'), FILTER_VALIDATE_EMAIL)) {
+        return [
+            'code' => 'smtp_user_invalid',
+            'message' => 'SMTP_USER must be the full Hostinger mailbox address.',
+        ];
+    }
+
+    if (!filter_var(email_address(config_value('SMTP_FROM')), FILTER_VALIDATE_EMAIL)) {
+        return [
+            'code' => 'smtp_from_invalid',
+            'message' => 'SMTP_FROM must contain a valid sender address.',
+        ];
+    }
+
+    return null;
 }
 
 function allow_php_mail(): bool
@@ -1102,9 +1145,11 @@ function email_address(string $value): string
 function send_email(string $recipient, string $subject, string $html, string $type, ?int $userId = null, array $attachments = []): array
 {
     if (!email_configured()) {
-        $message = 'SMTP configuration missing. PHP mail() fallback is disabled because it cannot guarantee delivery on this hosting plan.';
+        $configError = smtp_config_error();
+        $message = $configError['message'] ?? 'SMTP configuration missing. PHP mail() fallback is disabled because it cannot guarantee delivery on this hosting plan.';
+        $code = $configError['code'] ?? 'email_not_configured';
         log_email($recipient, $subject, $type, 'failed', $message, $userId);
-        return ['success' => false, 'code' => 'email_not_configured', 'error' => $message];
+        return ['success' => false, 'code' => $code, 'error' => $message];
     }
 
     try {
@@ -1117,8 +1162,51 @@ function send_email(string $recipient, string $subject, string $html, string $ty
         return ['success' => true];
     } catch (Throwable $error) {
         log_email($recipient, $subject, $type, 'failed', $error->getMessage(), $userId);
-        return ['success' => false, 'code' => 'email_send_failed', 'error' => $error->getMessage()];
+        return ['success' => false, 'code' => classify_email_send_error($error->getMessage()), 'error' => $error->getMessage()];
     }
+}
+
+function classify_email_send_error(string $message): string
+{
+    $lower = strtolower($message);
+    if (strpos($lower, 'smtp command failed (535') !== false || strpos($lower, 'authentication') !== false || strpos($lower, 'auth') !== false) {
+        return 'smtp_auth_failed';
+    }
+    if (strpos($lower, 'connection failed') !== false || strpos($lower, 'timed out') !== false || strpos($lower, 'network') !== false) {
+        return 'smtp_connection_failed';
+    }
+    if (strpos($lower, 'starttls') !== false || strpos($lower, 'crypto') !== false || strpos($lower, 'certificate') !== false) {
+        return 'smtp_tls_failed';
+    }
+    return 'email_send_failed';
+}
+
+function public_email_failure(array $result): array
+{
+    $code = (string)($result['code'] ?? 'email_send_failed');
+    $configurationCodes = [
+        'email_not_configured',
+        'smtp_password_placeholder',
+        'smtp_user_invalid',
+        'smtp_from_invalid',
+        'smtp_auth_failed',
+        'smtp_connection_failed',
+        'smtp_tls_failed',
+    ];
+
+    if (in_array($code, $configurationCodes, true)) {
+        return [
+            'status' => 503,
+            'error' => 'Der E-Mail-Versand ist aktuell nicht korrekt konfiguriert. Bitte kontaktiere HR/Prozessmanagement.',
+            'errorCode' => $code,
+        ];
+    }
+
+    return [
+        'status' => 500,
+        'error' => 'Die Anfrage konnte technisch nicht verarbeitet werden. Bitte später erneut versuchen.',
+        'errorCode' => $code,
+    ];
 }
 
 function activation_email(array $user, string $token): array
@@ -1264,7 +1352,8 @@ function handle_request_access(): void
 
     $result = activation_email($user, $token);
     if (!$result['success']) {
-        json_response(['success' => false, 'error' => 'Die Anfrage konnte technisch nicht verarbeitet werden. Bitte später erneut versuchen.', 'errorCode' => $result['code'] ?? 'email_send_failed'], 500);
+        $failure = public_email_failure($result);
+        json_response(['success' => false, 'error' => $failure['error'], 'errorCode' => $failure['errorCode']], $failure['status']);
     }
 
     log_auth('activation_link_sent', $email, 'success');
@@ -1296,7 +1385,8 @@ function handle_forgot_password(): void
 
     $result = reset_email($user, $token);
     if (!$result['success']) {
-        json_response(['success' => false, 'error' => 'Die Anfrage konnte technisch nicht verarbeitet werden. Bitte später erneut versuchen.', 'errorCode' => $result['code'] ?? 'email_send_failed'], 500);
+        $failure = public_email_failure($result);
+        json_response(['success' => false, 'error' => $failure['error'], 'errorCode' => $failure['errorCode']], $failure['status']);
     }
 
     log_auth('password_reset_requested', $email, 'success');
@@ -1976,7 +2066,10 @@ function handle_admin_system_check(): void
         'SMTP_USER' => config_value('SMTP_USER') !== '',
         'SMTP_PASSWORD' => config_value('SMTP_PASSWORD') !== '',
         'SMTP_FROM' => config_value('SMTP_FROM') !== '',
+        'SMTP_SECURE' => config_value('SMTP_SECURE') !== '',
+        'ALLOW_PHP_MAIL' => allow_php_mail(),
     ];
+    $smtpIssue = smtp_config_error();
     $loginErrorsStmt = db()->query("
         SELECT created_at timestamp, email, error_code errorCode
         FROM bb_auth_log
@@ -1998,6 +2091,8 @@ function handle_admin_system_check(): void
         'authSystemActive' => config_value('JWT_SECRET') !== '',
         'emailServiceConfigured' => email_configured(),
         'smtp' => $smtp,
+        'smtpConfigErrorCode' => $smtpIssue['code'] ?? null,
+        'smtpConfigError' => $smtpIssue['message'] ?? null,
         'authProvider' => 'email_password',
         'activeUserCount' => (int)($counts['active_users'] ?? 0),
         'usersWithPassword' => (int)($counts['users_with_password'] ?? 0),
