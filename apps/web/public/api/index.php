@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-smtp-auth-feedback-v14';
+const BENEFITBAR_API_VERSION = '2026-05-18-email-body-fix-v15';
 
 header('X-Content-Type-Options: nosniff');
 
@@ -1038,6 +1038,7 @@ function send_native_mail(string $recipient, string $subject, string $html, arra
     }
 
     $from = default_email_from();
+    $contentType = '';
     $body = build_email_body($html, $attachments, $contentType);
     $headers = [
         'From: ' . $from,
@@ -1115,6 +1116,7 @@ function send_smtp(string $recipient, string $subject, string $html, array $atta
     smtp_command($socket, 'RCPT TO:<' . $recipient . '>', [250, 251]);
     smtp_command($socket, 'DATA', [354]);
 
+    $contentType = '';
     $body = build_email_body($html, $attachments, $contentType);
     $headers = [
         'From: ' . $from,
