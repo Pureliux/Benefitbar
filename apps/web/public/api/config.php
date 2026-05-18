@@ -99,8 +99,8 @@ function benefitbar_config(): array
 
     if (!$config['FRONTEND_URL']) {
         $config['FRONTEND_URL'] = $scheme . '://' . ($currentHost ?: 'localhost');
-    } elseif ($currentHost !== '' && strpos((string)$config['FRONTEND_URL'], 'hostingersite.com') !== false && strpos($currentHost, 'tchibo-benefitbar.at') !== false) {
-        $config['FRONTEND_URL'] = $scheme . '://' . $currentHost;
+    } elseif (strpos((string)$config['FRONTEND_URL'], 'hostingersite.com') !== false) {
+        $config['FRONTEND_URL'] = 'https://tchibo-benefitbar.at';
     }
 
     return $config;

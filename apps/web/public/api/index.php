@@ -902,8 +902,8 @@ function normalized_email_from(string $value): string
     $address = email_address($value);
     $currentHost = (string)($_SERVER['HTTP_HOST'] ?? '');
 
-    if ($currentHost !== '' && strpos($address, 'hostingersite.com') !== false && strpos($currentHost, 'tchibo-benefitbar.at') !== false) {
-        $address = 'no-reply@' . preg_replace('/^www\./i', '', $currentHost);
+    if (strpos($address, 'hostingersite.com') !== false) {
+        $address = 'no-reply@tchibo-benefitbar.at';
     }
 
     return 'Tchibo Benefitbar <' . $address . '>';
