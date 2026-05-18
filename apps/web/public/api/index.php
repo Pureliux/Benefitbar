@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
+const BENEFITBAR_API_VERSION = '2026-05-18-config-v2';
+
 header('X-Content-Type-Options: nosniff');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -78,6 +80,16 @@ function route_path(): string
 
     $path = preg_replace('#^/index\.php#', '', $path) ?: '/';
     return '/' . trim($path, '/');
+}
+
+function database_config_present(): bool
+{
+    $config = benefitbar_config();
+
+    return (string)($config['DB_HOST'] ?? '') !== ''
+        && (string)($config['DB_NAME'] ?? '') !== ''
+        && (string)($config['DB_USER'] ?? '') !== ''
+        && (string)($config['DB_PASSWORD'] ?? '') !== '';
 }
 
 function db(): PDO
@@ -1548,13 +1560,35 @@ function handle_microsoft_callback(): void
 }
 
 try {
-    migrate();
     $path = route_path();
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
     if ($method === 'GET' && ($path === '/health' || $path === '/')) {
-        json_response(['status' => 'ok', 'runtime' => 'php', 'database' => true]);
+        $databaseConfigured = database_config_present();
+        $databaseConnected = false;
+        $databaseError = null;
+
+        if ($databaseConfigured) {
+            try {
+                db()->query('SELECT 1');
+                $databaseConnected = true;
+            } catch (Throwable $databaseException) {
+                $databaseError = $databaseException->getMessage();
+            }
+        }
+
+        json_response([
+            'status' => 'ok',
+            'runtime' => 'php',
+            'apiVersion' => BENEFITBAR_API_VERSION,
+            'databaseConfigured' => $databaseConfigured,
+            'databaseConnected' => $databaseConnected,
+            'databaseError' => $databaseError,
+            'diagnostics' => benefitbar_config_diagnostics(),
+        ]);
     }
+
+    migrate();
 
     if ($method === 'GET' && $path === '/auth/me') {
         $user = require_user();
