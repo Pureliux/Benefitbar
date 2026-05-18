@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-smtp-diagnostics-v13';
+const BENEFITBAR_API_VERSION = '2026-05-18-smtp-auth-feedback-v14';
 
 header('X-Content-Type-Options: nosniff');
 
