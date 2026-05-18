@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-activation-email-link-only-v21';
+const BENEFITBAR_API_VERSION = '2026-05-18-budget-lock-chart-tooltip-v22';
 const LOGIN_EMAIL_ERROR_MESSAGE = 'Bitte verwende deine @eduscho.at-Adresse oder eine freigegebene E-Mail-Adresse.';
 
 header('X-Content-Type-Options: nosniff');
@@ -794,6 +794,28 @@ function recalculate_submission(int $submissionId): array
     ")->execute([$total, $coveredTotal, $ownTotal, $remaining, $monthlyTotal, now_sql(), $submissionId]);
 
     return find_submission_by_id($submissionId);
+}
+
+function submission_budget_exceeded(array $submission, array $year): bool
+{
+    $annualBudget = (float)($year['annual_budget'] ?? 0);
+    $totalSelected = (float)($submission['total_selected_amount'] ?? 0);
+    $ownContribution = (float)($submission['employee_own_contribution_amount'] ?? 0);
+
+    return $ownContribution > 0.005 || ($annualBudget > 0 && $totalSelected - $annualBudget > 0.005);
+}
+
+function require_budget_available_for_new_benefit(array $submission, array $year): void
+{
+    if (!submission_budget_exceeded($submission, $year)) {
+        return;
+    }
+
+    json_response([
+        'success' => false,
+        'error' => 'Budget überschritten. Entferne zuerst einen Benefit, bevor du ein weiteres auswählst.',
+        'errorCode' => 'budget_exceeded',
+    ], 409);
 }
 
 function benefit_payload_for_user(array $user): array
@@ -1608,6 +1630,7 @@ function handle_select_benefit(): void
     $year = current_benefit_year();
     $submission = get_or_create_submission((int)$user['id'], (int)$year['id']);
     ensure_editable_submission($submission);
+    $submission = recalculate_submission((int)$submission['id']);
 
     $benefitStmt = db()->prepare('SELECT * FROM bb_benefits WHERE id = ? AND benefit_year_id = ? AND active = 1 LIMIT 1');
     $benefitStmt->execute([$benefitId, $year['id']]);
@@ -1621,6 +1644,8 @@ function handle_select_benefit(): void
     if ($existsStmt->fetch()) {
         json_response(benefit_payload_for_user($user));
     }
+
+    require_budget_available_for_new_benefit($submission, $year);
 
     $now = now_sql();
     db()->prepare("
@@ -1652,6 +1677,8 @@ function handle_add_custom_benefit(): void
 
     $submission = get_or_create_submission((int)$user['id'], (int)$year['id']);
     ensure_editable_submission($submission);
+    $submission = recalculate_submission((int)$submission['id']);
+    require_budget_available_for_new_benefit($submission, $year);
 
     $now = now_sql();
     db()->prepare("

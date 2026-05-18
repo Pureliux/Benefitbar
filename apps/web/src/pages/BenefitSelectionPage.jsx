@@ -6,13 +6,14 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import apiServerClient from '@/lib/apiServerClient';
+import { ActivePieCallout, ChartSegmentCallout, buildBenefitChartData } from '@/lib/benefitChart.jsx';
 import Header from '@/components/Header.jsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
 const currency = new Intl.NumberFormat('de-AT', { style: 'currency', currency: 'EUR' });
-const chartColors = ['#719C6F', '#C0A468', '#5B7C99', '#B66E6A', '#7A6FA3', '#4F8C85', '#D08A5B'];
+const budgetExceededMessage = 'Budget überschritten. Entferne zuerst einen Benefit, bevor du ein weiteres auswählst.';
 
 function payoutLabel(mode) {
   return mode === 'monthly_12' ? 'Monatlich über 12 Monate' : 'Einmalig';
@@ -38,7 +39,7 @@ const BenefitSelectionPage = () => {
   const [customBenefit, setCustomBenefit] = useState({ title: '', description: '', amount: '' });
   const [editingCustomId, setEditingCustomId] = useState(null);
   const [customEdit, setCustomEdit] = useState({ title: '', description: '', amount: '' });
-  const [activeChartItem, setActiveChartItem] = useState(null);
+  const [activeChartIndex, setActiveChartIndex] = useState(null);
   const repeatTimerRef = useRef(null);
   const repeatIntervalRef = useRef(null);
 
@@ -75,9 +76,22 @@ const BenefitSelectionPage = () => {
     setOverview(data);
   };
 
+  const isBudgetExceeded = () => {
+    const submission = overview?.submission || {};
+    const annualBudget = overview?.benefitYear?.annualBudget || 1000;
+
+    return (submission.employeeOwnContributionAmount || 0) > 0
+      || (submission.totalSelectedAmount || 0) > annualBudget;
+  };
+
   const handleSelectBenefit = async (benefit) => {
     if (overview?.submission?.status !== 'draft' && overview?.submission?.status !== 'needs_info') {
       toast.error('Diese Einreichung kann aktuell nicht bearbeitet werden.');
+      return;
+    }
+
+    if (isBudgetExceeded()) {
+      toast.error(budgetExceededMessage);
       return;
     }
 
@@ -118,6 +132,11 @@ const BenefitSelectionPage = () => {
     const amount = parseEuroInput(customBenefit.amount);
     if (!customBenefit.title.trim() || !amount || amount <= 0) {
       toast.error('Bitte Titel und Betrag angeben.');
+      return;
+    }
+
+    if (isBudgetExceeded()) {
+      toast.error(budgetExceededMessage);
       return;
     }
 
@@ -246,19 +265,9 @@ const BenefitSelectionPage = () => {
   const editable = submission.status === 'draft' || submission.status === 'needs_info';
   const annualBudget = benefitYear?.annualBudget || 1000;
   const remainingBudget = submission.remainingBudget ?? annualBudget;
-  const chartData = [
-    ...selectedBenefits
-      .map((item, index) => ({
-        name: item.isCustomBenefit ? item.customTitle : item.benefit?.title,
-        value: item.coveredAmount || 0,
-        color: chartColors[index % chartColors.length],
-      }))
-      .filter((item) => item.value > 0),
-    ...(remainingBudget > 0 ? [{ name: 'Noch verfügbar', value: remainingBudget, color: '#E8E2D6' }] : []),
-  ];
-  const safeChartData = chartData.length ? chartData : [{ name: 'Noch verfügbar', value: annualBudget, color: '#E8E2D6' }];
-  const chartDetail = activeChartItem;
-  const handleChartEnter = (entry) => setActiveChartItem(entry?.payload || entry);
+  const budgetExceeded = isBudgetExceeded();
+  const safeChartData = buildBenefitChartData(selectedBenefits, remainingBudget, annualBudget);
+  const handleChartEnter = (_entry, index) => setActiveChartIndex(index);
 
   return (
     <>
@@ -339,10 +348,10 @@ const BenefitSelectionPage = () => {
                     ) : (
                       <Button
                         onClick={() => handleSelectBenefit(benefit)}
-                        disabled={!editable || savingId === benefit.id}
+                        disabled={!editable || budgetExceeded || savingId === benefit.id}
                         className="w-full bg-[#C0A468] text-white hover:bg-[#A98D52]"
                       >
-                        {savingId === benefit.id ? 'Wird gespeichert …' : 'Benefit auswählen'}
+                        {budgetExceeded ? 'Budget überschritten' : (savingId === benefit.id ? 'Wird gespeichert …' : 'Benefit auswählen')}
                       </Button>
                     )}
                   </article>
@@ -411,11 +420,11 @@ const BenefitSelectionPage = () => {
                   </div>
                   <Button
                     onClick={handleAddCustomBenefit}
-                    disabled={!editable || savingId === 'custom'}
+                    disabled={!editable || budgetExceeded || savingId === 'custom'}
                     className="mt-4 bg-[#23211D] text-white hover:bg-[#38342D] dark:bg-[#C0A468]"
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    {savingId === 'custom' ? 'Wird gespeichert …' : 'Eigenen Benefit hinzufügen'}
+                    {budgetExceeded ? 'Budget überschritten' : (savingId === 'custom' ? 'Wird gespeichert …' : 'Eigenen Benefit hinzufügen')}
                   </Button>
                 </article>
               )}
@@ -427,6 +436,12 @@ const BenefitSelectionPage = () => {
                 <h2 className="mt-1 text-xl font-bold">Aktuelle Übersicht</h2>
               </div>
 
+              {budgetExceeded && (
+                <div className="rounded-lg border border-[#EA5153]/30 bg-[#EA5153]/10 p-3 text-sm font-medium text-[#EA5153]">
+                  {budgetExceededMessage}
+                </div>
+              )}
+
               <div className="relative h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -435,32 +450,25 @@ const BenefitSelectionPage = () => {
                       dataKey="value"
                       innerRadius={86}
                       outerRadius={124}
+                      startAngle={90}
+                      endAngle={-270}
                       paddingAngle={3}
                       stroke="transparent"
+                      activeIndex={activeChartIndex ?? undefined}
+                      activeShape={ActivePieCallout}
                       onMouseEnter={handleChartEnter}
-                      onMouseLeave={() => setActiveChartItem(null)}
+                      onMouseLeave={() => setActiveChartIndex(null)}
                     >
-                      {safeChartData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
+                      {safeChartData.map((entry) => <Cell key={entry.id} fill={entry.color} />)}
                     </Pie>
                   </PieChart>
                 </ResponsiveContainer>
+                <ChartSegmentCallout data={safeChartData} activeIndex={activeChartIndex} />
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                   <span className="text-xs uppercase text-muted-foreground">Noch frei</span>
                   <strong className="max-w-[9rem] text-balance text-xl leading-tight">{currency.format(remainingBudget)}</strong>
                 </div>
               </div>
-
-              {chartDetail && (
-                <div className="rounded-lg border border-border bg-background p-3 shadow-sm dark:bg-muted/30">
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: chartDetail.color }} />
-                      <span className="truncate font-medium">{chartDetail.name}</span>
-                    </span>
-                    <span className="shrink-0 font-bold">{currency.format(chartDetail.value || 0)}</span>
-                  </div>
-                </div>
-              )}
 
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="rounded-md bg-muted/40 p-3">
