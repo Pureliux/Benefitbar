@@ -93,11 +93,17 @@ function db(): PDO
     $password = config_value('DB_PASSWORD');
 
     if (!$name || !$user) {
-        json_response([
+        $payload = [
             'success' => false,
             'error' => 'Datenbank ist nicht konfiguriert.',
             'errorCode' => 'database_not_configured',
-        ], 500);
+        ];
+
+        if (function_exists('benefitbar_config_diagnostics')) {
+            $payload['diagnostics'] = benefitbar_config_diagnostics();
+        }
+
+        json_response($payload, 500);
     }
 
     $pdo = new PDO(

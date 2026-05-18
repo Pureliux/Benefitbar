@@ -47,3 +47,41 @@ function benefitbar_config(): array
 
     return $config;
 }
+
+function benefitbar_config_diagnostics(): array
+{
+    $localConfig = __DIR__ . '/config.local.php';
+    $localReturnedArray = false;
+    $localKeys = [];
+    $localError = null;
+
+    if (is_file($localConfig) && is_readable($localConfig)) {
+        try {
+            $local = require $localConfig;
+            $localReturnedArray = is_array($local);
+            $localKeys = $localReturnedArray ? array_keys($local) : [];
+        } catch (Throwable $error) {
+            $localError = $error->getMessage();
+        }
+    }
+
+    $config = benefitbar_config();
+
+    return [
+        'expectedLocalConfigFile' => 'public_html/api/config.local.php',
+        'configLocalExists' => is_file($localConfig),
+        'configLocalReadable' => is_readable($localConfig),
+        'configLocalReturnedArray' => $localReturnedArray,
+        'configLocalKeys' => $localKeys,
+        'configLocalError' => $localError,
+        'requiredValuesPresent' => [
+            'DB_HOST' => (string)($config['DB_HOST'] ?? '') !== '',
+            'DB_NAME' => (string)($config['DB_NAME'] ?? '') !== '',
+            'DB_USER' => (string)($config['DB_USER'] ?? '') !== '',
+            'DB_PASSWORD' => (string)($config['DB_PASSWORD'] ?? '') !== '',
+            'FRONTEND_URL' => (string)($config['FRONTEND_URL'] ?? '') !== '',
+            'JWT_SECRET' => (string)($config['JWT_SECRET'] ?? '') !== '',
+            'SETUP_KEY' => (string)($config['SETUP_KEY'] ?? '') !== '',
+        ],
+    ];
+}
