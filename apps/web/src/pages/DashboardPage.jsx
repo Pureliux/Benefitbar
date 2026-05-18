@@ -1,267 +1,244 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import { useAuth } from '@/contexts/AuthContext.jsx';
-import Header from '@/components/Header.jsx';
-import pb from '@/lib/pocketbaseClient';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { Calendar, Euro, TrendingUp, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { AlertCircle, ArrowRight, CheckCircle2, CircleDollarSign, Clock, WalletCards } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext.jsx';
+import apiServerClient from '@/lib/apiServerClient';
+import Header from '@/components/Header.jsx';
+import { Button } from '@/components/ui/button';
+
+const currency = new Intl.NumberFormat('de-AT', { style: 'currency', currency: 'EUR' });
+
+function firstNameFromUser(employee, currentUser) {
+  const email = employee?.email || currentUser?.email || '';
+  const local = email.split('@')[0] || 'du';
+  const first = local.includes('.') ? local.split('.')[0] : (employee?.firstName || currentUser?.firstName || currentUser?.name || local);
+  return first.charAt(0).toUpperCase() + first.slice(1);
+}
+
+function greetingForNow() {
+  const hour = new Date().getHours();
+  if (hour < 11) return 'Guten Morgen';
+  if (hour < 17) return 'Willkommen';
+  return 'Guten Abend';
+}
+
+function statusLabel(status) {
+  const labels = {
+    draft: 'Entwurf',
+    submitted: 'In Pruefung',
+    needs_info: 'Unterlagen fehlen',
+    approved: 'Genehmigt',
+    rejected: 'Abgelehnt',
+    auto_assigned: 'Automatisch zugewiesen',
+  };
+  return labels[status] || 'Entwurf';
+}
 
 const DashboardPage = () => {
-  const { employee, isEligible } = useAuth();
+  const { employee, currentUser, isEligible } = useAuth();
   const navigate = useNavigate();
-  const [benefitYear, setBenefitYear] = useState(null);
-  const [submission, setSubmission] = useState(null);
-  const [selectedBenefits, setSelectedBenefits] = useState([]);
+  const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const loadOverview = async () => {
+      setLoading(true);
+      setErrorMsg(null);
       try {
-        const yearRecord = await pb.collection('benefitYears').getFirstListItem(
-          'status="open"',
-          { $autoCancel: false }
-        );
-        setBenefitYear(yearRecord);
-
-        try {
-          const submissionRecord = await pb.collection('submissions').getFirstListItem(
-            `employeeId="${employee.id}" && benefitYearId="${yearRecord.id}"`,
-            { $autoCancel: false }
-          );
-          setSubmission(submissionRecord);
-
-          const benefits = await pb.collection('selectedBenefits').getFullList({
-            filter: `submissionId="${submissionRecord.id}"`,
-            expand: 'benefitId',
-            $autoCancel: false
-          });
-          setSelectedBenefits(benefits);
-        } catch (err) {
-          setSubmission(null);
-          setSelectedBenefits([]);
+        const res = await apiServerClient.fetch('/benefits/overview');
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Daten konnten nicht geladen werden.');
         }
-      } catch (err) {
-        console.error('Failed to fetch data:', err);
+        setOverview(data);
+      } catch (error) {
+        setErrorMsg(error.message || 'Daten konnten nicht geladen werden.');
       } finally {
         setLoading(false);
       }
     };
 
-    if (employee) {
-      fetchData();
+    loadOverview();
+  }, []);
+
+  const submission = overview?.submission;
+  const benefitYear = overview?.benefitYear;
+  const selectedBenefits = overview?.selectedBenefits || [];
+  const totalBudget = benefitYear?.annualBudget || 1000;
+  const selectedAmount = submission?.totalSelectedAmount || 0;
+  const remainingBudget = submission?.remainingBudget ?? totalBudget;
+  const ownContribution = submission?.employeeOwnContributionAmount || 0;
+  const firstName = firstNameFromUser(employee, currentUser);
+
+  const chartData = useMemo(() => {
+    const segments = selectedBenefits.map((item, index) => ({
+      name: item.isCustomBenefit ? item.customTitle : item.benefit?.title,
+      value: item.coveredAmount || 0,
+      color: ['#C0A468', '#719C6F', '#EDD38E', '#8D7A4D', '#4F7E68', '#D7B95C'][index % 6],
+    })).filter((item) => item.value > 0);
+
+    if (remainingBudget > 0) {
+      segments.push({ name: 'Noch verfuegbar', value: remainingBudget, color: '#E8E2D6' });
     }
-  }, [employee]);
+    return segments.length ? segments : [{ name: 'Noch verfuegbar', value: totalBudget, color: '#E8E2D6' }];
+  }, [remainingBudget, selectedBenefits, totalBudget]);
 
   if (loading) {
     return (
       <>
         <Header />
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="text-foreground text-lg">Lädt...</div>
-        </div>
+        <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-background">
+          <div className="text-foreground">Laedt...</div>
+        </main>
       </>
     );
   }
 
-  const totalBudget = benefitYear?.annualBudget || 1000;
-  const selectedAmount = submission?.totalSelectedAmount || 0;
-  const remainingBudget = totalBudget - selectedAmount;
-  const ownContribution = submission?.employeeOwnContributionAmount || 0;
-
-  const chartData = [
-    ...selectedBenefits.map((sb) => ({
-      name: sb.isCustomBenefit ? sb.customTitle : sb.expand?.benefitId?.title,
-      value: sb.coveredAmount || 0,
-      color: 'hsl(var(--primary))'
-    })),
-    { name: 'Verbleibendes Budget', value: remainingBudget, color: 'hsl(var(--muted))' }
-  ];
-
-  if (ownContribution > 0) {
-    chartData.push({ name: 'Eigenanteil', value: ownContribution, color: 'hsl(var(--destructive))' });
-  }
-
-  const getStatusBadge = (status) => {
-    const badges = {
-      draft: { label: 'Entwurf', color: 'bg-muted text-muted-foreground border-transparent' },
-      submitted: { label: 'Eingereicht', color: 'bg-primary text-primary-foreground border-transparent' },
-      needs_info: { label: 'Info benötigt', color: 'bg-destructive text-destructive-foreground border-transparent' },
-      approved: { label: 'Genehmigt', color: 'bg-success text-success-foreground border-transparent' },
-      rejected: { label: 'Abgelehnt', color: 'bg-destructive text-destructive-foreground border-transparent' },
-      auto_assigned: { label: 'Auto-zugewiesen', color: 'bg-secondary text-secondary-foreground border-transparent' }
-    };
-    const badge = badges[status] || badges.draft;
-    return <span className={`px-3 py-1 rounded-full text-xs font-medium border ${badge.color}`}>{badge.label}</span>;
-  };
-
   return (
     <>
       <Helmet>
-        <title>Dashboard - Tchibo Benefit-Bar</title>
-        <meta name="description" content="Dein Benefit-Bar Dashboard" />
+        <title>Übersicht - Tchibo Benefit-Bar</title>
+        <meta name="description" content="Deine Benefit-Bar Übersicht" />
       </Helmet>
 
       <Header />
 
-      <div className="min-h-[calc(100vh-4rem)] bg-background py-8 transition-colors duration-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-foreground mb-2">
-              Willkommen, {employee?.firstName}!
-            </h1>
-            <p className="text-muted-foreground">
-              Benefit-Jahr {benefitYear?.year || '2026'}
-            </p>
-          </div>
+      <main className="min-h-[calc(100vh-4rem)] bg-[#F4F1EA] py-8 text-[#222222] transition-colors dark:bg-[#171614] dark:text-[#F7F2E8]">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <section className="mb-8 overflow-hidden rounded-lg border border-[#D8C894] bg-[#23211D] p-6 text-white shadow-xl sm:p-8">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-[#EDD38E]">Benefit-Jahr {benefitYear?.year || new Date().getFullYear()}</p>
+                <h1 className="text-3xl font-bold sm:text-4xl">{greetingForNow()} {firstName}!</h1>
+                <p className="mt-3 text-sm text-white/70">Hier siehst du dein Budget, deine Auswahl und den aktuellen Status deiner Einreichung.</p>
+              </div>
+              <Button onClick={() => navigate('/benefits')} className="bg-[#C0A468] text-white hover:bg-[#A98D52]">
+                Benefits auswaehlen
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </section>
+
+          {errorMsg && (
+            <div className="mb-8 flex items-start gap-3 rounded-lg border border-[#EA5153]/30 bg-[#EA5153]/10 p-4 text-[#EA5153]">
+              <AlertCircle className="mt-0.5 h-5 w-5" />
+              <p className="text-sm font-medium">{errorMsg}</p>
+            </div>
+          )}
 
           {!isEligible && (
-            <div className="bg-card border border-border rounded-xl p-6 mb-8 flex items-start gap-4 shadow-sm">
-              <AlertCircle className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
-              <div>
-                <h3 className="text-card-foreground font-semibold mb-1">Noch nicht teilnahmeberechtigt</h3>
-                <p className="text-muted-foreground text-sm">
-                  Du bist ab {employee?.eligibleFrom ? format(new Date(employee.eligibleFrom), 'dd.MM.yyyy') : 'Unbekannt'} für die Benefit-Bar teilnahmeberechtigt.
-                </p>
+            <div className="mb-8 rounded-lg border border-[#C0A468]/30 bg-white p-6 shadow-sm dark:bg-[#22201D]">
+              <div className="flex items-start gap-4">
+                <AlertCircle className="mt-1 h-6 w-6 shrink-0 text-[#C0A468]" />
+                <div>
+                  <h2 className="text-lg font-semibold">Noch nicht teilnahmeberechtigt</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">Deine Teilnahmeberechtigung wird in deinem Profil verwaltet.</p>
+                </div>
               </div>
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-card border border-border shadow-sm rounded-xl p-6 transition-colors duration-200">
-              <div className="flex items-center gap-3 mb-2">
-                <Euro className="h-5 w-5 text-primary" />
-                <h3 className="text-muted-foreground text-sm font-medium">Gesamtbudget</h3>
-              </div>
-              <p className="text-3xl font-bold text-card-foreground">{totalBudget} €</p>
-            </div>
-
-            <div className="bg-card border border-border shadow-sm rounded-xl p-6 transition-colors duration-200">
-              <div className="flex items-center gap-3 mb-2">
-                <TrendingUp className="h-5 w-5 text-success" />
-                <h3 className="text-muted-foreground text-sm font-medium">Bereits ausgewählt</h3>
-              </div>
-              <p className="text-3xl font-bold text-card-foreground">{selectedAmount} €</p>
-            </div>
-
-            <div className="bg-card border border-border shadow-sm rounded-xl p-6 transition-colors duration-200">
-              <div className="flex items-center gap-3 mb-2">
-                <Calendar className="h-5 w-5 text-secondary" />
-                <h3 className="text-muted-foreground text-sm font-medium">Verbleibendes Budget</h3>
-              </div>
-              <p className="text-3xl font-bold text-card-foreground">{remainingBudget} €</p>
-            </div>
-          </div>
-
-          {submission && (
-            <div className="bg-card border border-border shadow-sm rounded-xl p-6 mb-8 transition-colors duration-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <h2 className="text-2xl font-bold text-card-foreground">Deine Auswahl</h2>
-                {getStatusBadge(submission.status)}
-              </div>
-
-              {selectedBenefits.length > 0 && (
-                <div className="mb-6">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={chartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, value }) => `${name}: ${value}€`}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))', 
-                          borderColor: 'hsl(var(--border))',
-                          color: 'hsl(var(--card-foreground))'
-                        }} 
-                      />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+          <section className="grid gap-6 lg:grid-cols-[1.05fr_1.95fr]">
+            <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold">Mein Budget</h2>
+                  <p className="text-sm text-muted-foreground">{statusLabel(submission?.status)}</p>
                 </div>
-              )}
+                <WalletCards className="h-6 w-6 text-[#C0A468]" />
+              </div>
 
-              <div className="space-y-4">
-                {selectedBenefits.map((sb) => (
-                  <div key={sb.id} className="bg-background rounded-lg p-4 border border-border">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-semibold text-foreground">
-                        {sb.isCustomBenefit ? sb.customTitle : sb.expand?.benefitId?.title}
-                      </h4>
-                      <span className="text-primary font-bold">{sb.requestedAmount} €</span>
-                    </div>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <p>Vom Unternehmen gedeckt: <span className="text-success font-medium">{sb.coveredAmount} €</span></p>
-                      {sb.ownContributionAmount > 0 && (
-                        <p>Eigenanteil: <span className="text-destructive font-medium">{sb.ownContributionAmount} €</span></p>
-                      )}
-                      <p>Auszahlung: {sb.payoutMode === 'monthly_12' ? 'Monatlich (12x)' : 'Einmalig'}</p>
-                    </div>
+              <div className="relative h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={chartData} dataKey="value" innerRadius={78} outerRadius={112} paddingAngle={3} stroke="transparent">
+                      {chartData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
+                    </Pie>
+                    <Tooltip formatter={(value) => currency.format(Number(value))} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span className="text-xs uppercase text-muted-foreground">Noch frei</span>
+                  <strong className="text-2xl">{currency.format(remainingBudget)}</strong>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {chartData.map((entry) => (
+                  <div key={entry.name} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="flex items-center gap-2 truncate">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                      <span className="truncate">{entry.name}</span>
+                    </span>
+                    <span className="font-medium">{currency.format(entry.value)}</span>
                   </div>
                 ))}
               </div>
-
-              {ownContribution > 0 && (
-                <div className="mt-6 bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-                  <p className="text-sm text-foreground">
-                    <span className="font-semibold text-destructive">Hinweis:</span> Dein Eigenanteil beträgt <span className="font-bold">{ownContribution} €</span>. Dieser wird von dir selbst getragen.
-                  </p>
-                </div>
-              )}
-
-              {submission.status === 'submitted' && (
-                <div className="mt-6 bg-primary/10 border border-primary/20 rounded-lg p-4">
-                  <p className="text-sm text-foreground">
-                    Deine Einreichung wurde am <span className="font-medium">{format(new Date(submission.submittedAt), 'dd.MM.yyyy')}</span> eingereicht und wird derzeit geprüft.
-                  </p>
-                </div>
-              )}
-
-              {submission.status === 'needs_info' && submission.needsInfoReason && (
-                <div className="mt-6 bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-                  <p className="text-sm font-semibold text-destructive mb-2">Zusätzliche Informationen benötigt:</p>
-                  <p className="text-sm text-foreground">{submission.needsInfoReason}</p>
-                </div>
-              )}
-
-              {submission.status === 'approved' && submission.adminComment && (
-                <div className="mt-6 bg-success/10 border border-success/20 rounded-lg p-4">
-                  <p className="text-sm font-semibold text-success mb-2">Kommentar:</p>
-                  <p className="text-sm text-foreground">{submission.adminComment}</p>
-                </div>
-              )}
             </div>
-          )}
 
-          {!submission && isEligible && (
-            <div className="bg-card border border-border shadow-sm rounded-xl p-8 text-center transition-colors duration-200">
-              <h3 className="text-xl font-bold text-card-foreground mb-4">Noch keine Benefits ausgewählt</h3>
-              <p className="text-muted-foreground mb-6">
-                Wähle deine Benefits aus und nutze dein Budget von {totalBudget} €.
-              </p>
-              <Button
-                onClick={() => navigate('/benefits')}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Benefits auswählen
-              </Button>
+            <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+                  <CircleDollarSign className="mb-3 h-5 w-5 text-[#C0A468]" />
+                  <p className="text-sm text-muted-foreground">Gesamtbudget</p>
+                  <p className="mt-1 text-2xl font-bold">{currency.format(totalBudget)}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+                  <CheckCircle2 className="mb-3 h-5 w-5 text-[#719C6F]" />
+                  <p className="text-sm text-muted-foreground">Ausgewaehlt</p>
+                  <p className="mt-1 text-2xl font-bold">{currency.format(selectedAmount)}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+                  <WalletCards className="mb-3 h-5 w-5 text-[#719C6F]" />
+                  <p className="text-sm text-muted-foreground">Noch verfuegbar</p>
+                  <p className="mt-1 text-2xl font-bold text-[#719C6F]">{currency.format(remainingBudget)}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+                  <AlertCircle className="mb-3 h-5 w-5 text-[#EA5153]" />
+                  <p className="text-sm text-muted-foreground">Eigenanteil</p>
+                  <p className="mt-1 text-2xl font-bold text-[#EA5153]">{currency.format(ownContribution)}</p>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+                <div className="mb-5 flex items-center justify-between">
+                  <h2 className="text-xl font-semibold">Aktuelle Auswahl</h2>
+                  <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">{selectedBenefits.length} Positionen</span>
+                </div>
+
+                {selectedBenefits.length ? (
+                  <div className="divide-y divide-border">
+                    {selectedBenefits.map((item) => (
+                      <div key={item.id} className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="font-semibold">{item.isCustomBenefit ? item.customTitle : item.benefit?.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Unternehmen {currency.format(item.coveredAmount)}
+                            {item.ownContributionAmount > 0 ? ` · Eigenanteil ${currency.format(item.ownContributionAmount)}` : ''}
+                          </p>
+                        </div>
+                        <span className="font-bold text-[#C0A468]">{currency.format(item.requestedAmount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-border bg-muted/30 p-8 text-center">
+                    <Clock className="mx-auto mb-3 h-7 w-7 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold">Noch keine Benefits ausgewaehlt</h3>
+                    <p className="mx-auto mt-2 text-sm text-muted-foreground">Starte mit der Auswahl und sieh sofort, wie dein Budget aufgeteilt wird.</p>
+                    <Button onClick={() => navigate('/benefits')} className="mt-5 bg-[#C0A468] text-white hover:bg-[#A98D52]">
+                      Benefits auswaehlen
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+          </section>
         </div>
-      </div>
+      </main>
     </>
   );
 };

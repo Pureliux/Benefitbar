@@ -179,7 +179,164 @@ function migrate(): void
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
 
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS bb_benefit_years (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            year INT UNSIGNED NOT NULL UNIQUE,
+            annual_budget DECIMAL(10,2) NOT NULL DEFAULT 1000.00,
+            process_open_date DATE NULL,
+            submission_deadline DATETIME NULL,
+            reminder_date DATE NULL,
+            auto_assignment_date DATE NULL,
+            status VARCHAR(40) NOT NULL DEFAULT 'open',
+            allow_custom_benefits TINYINT(1) NOT NULL DEFAULT 1,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL,
+            INDEX idx_benefit_year_status (status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS bb_benefits (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            benefit_year_id INT UNSIGNED NOT NULL,
+            title VARCHAR(190) NOT NULL,
+            description TEXT NULL,
+            category VARCHAR(120) NOT NULL DEFAULT '',
+            fixed_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            payout_mode VARCHAR(40) NOT NULL DEFAULT 'one_time',
+            receipt_required TINYINT(1) NOT NULL DEFAULT 1,
+            active TINYINT(1) NOT NULL DEFAULT 1,
+            sort_order INT NOT NULL DEFAULT 0,
+            is_default_auto_assignment TINYINT(1) NOT NULL DEFAULT 0,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL,
+            INDEX idx_benefit_year (benefit_year_id),
+            INDEX idx_benefit_active (active)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS bb_submissions (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            user_id INT UNSIGNED NOT NULL,
+            benefit_year_id INT UNSIGNED NOT NULL,
+            status VARCHAR(40) NOT NULL DEFAULT 'draft',
+            submitted_at DATETIME NULL,
+            total_selected_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            covered_by_company_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            employee_own_contribution_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            remaining_budget DECIMAL(10,2) NOT NULL DEFAULT 1000.00,
+            monthly_payout_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            admin_comment TEXT NULL,
+            needs_info_reason TEXT NULL,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL,
+            UNIQUE KEY uniq_user_year (user_id, benefit_year_id),
+            INDEX idx_submission_status (status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS bb_selected_benefits (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            submission_id INT UNSIGNED NOT NULL,
+            benefit_id INT UNSIGNED NULL,
+            is_custom_benefit TINYINT(1) NOT NULL DEFAULT 0,
+            custom_title VARCHAR(190) NULL,
+            custom_description TEXT NULL,
+            requested_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            covered_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            own_contribution_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            payout_mode VARCHAR(40) NOT NULL DEFAULT 'one_time',
+            monthly_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            status VARCHAR(40) NOT NULL DEFAULT 'selected',
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL,
+            INDEX idx_selected_submission (submission_id),
+            INDEX idx_selected_benefit (benefit_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS bb_attachments (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            selected_benefit_id INT UNSIGNED NOT NULL,
+            user_id INT UNSIGNED NOT NULL,
+            file_name VARCHAR(255) NOT NULL,
+            file_path VARCHAR(255) NOT NULL,
+            file_type VARCHAR(120) NOT NULL DEFAULT '',
+            uploaded_at DATETIME NOT NULL,
+            created_at DATETIME NOT NULL,
+            INDEX idx_attachment_selected (selected_benefit_id),
+            INDEX idx_attachment_user (user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    seed_benefit_data($pdo);
     bootstrap_admin();
+}
+
+function seed_benefit_data(PDO $pdo): void
+{
+    $year = (int)gmdate('Y');
+    $now = now_sql();
+
+    $stmt = $pdo->prepare('SELECT * FROM bb_benefit_years WHERE year = ? LIMIT 1');
+    $stmt->execute([$year]);
+    $benefitYear = $stmt->fetch();
+
+    if (!$benefitYear) {
+        $deadline = sprintf('%d-10-31 23:59:00', $year);
+        $pdo->prepare("
+            INSERT INTO bb_benefit_years (
+                year, annual_budget, process_open_date, submission_deadline, status,
+                allow_custom_benefits, created_at, updated_at
+            ) VALUES (?, 1000.00, ?, ?, 'open', 1, ?, ?)
+        ")->execute([$year, $year . '-01-01', $deadline, $now, $now]);
+        $benefitYearId = (int)$pdo->lastInsertId();
+    } else {
+        $benefitYearId = (int)$benefitYear['id'];
+    }
+
+    $countStmt = $pdo->prepare('SELECT COUNT(*) count FROM bb_benefits WHERE benefit_year_id = ?');
+    $countStmt->execute([$benefitYearId]);
+    if ((int)($countStmt->fetch()['count'] ?? 0) > 0) {
+        return;
+    }
+
+    $benefits = [
+        ['Yoga-Kurs', 'Kurse fuer Bewegung, Achtsamkeit und mentale Gesundheit.', 'Gesundheit', 200, 'one_time', 1, 10, 0],
+        ['Wiener Oeffi-Ticket', 'Zuschuss fuer oeffentliche Verkehrsmittel und nachhaltige Mobilitaet.', 'Mobilitaet', 460, 'monthly_12', 1, 20, 1],
+        ['Fitness-Zuschuss', 'Mitgliedschaft, Kurse oder Trainingsangebote fuer deine Fitness.', 'Fitness', 300, 'one_time', 1, 30, 0],
+        ['Weiterbildung', 'Seminare, Kurse oder Fachliteratur fuer deine berufliche Entwicklung.', 'Weiterbildung', 500, 'one_time', 1, 40, 0],
+        ['Gesundheitscheck', 'Vorsorge, Beratung oder anerkannte Gesundheitsleistungen.', 'Gesundheit', 250, 'one_time', 1, 50, 0],
+        ['Homeoffice-Ausstattung', 'Arbeitsmittel fuer einen guten Arbeitsplatz zuhause.', 'Arbeitsplatz', 350, 'one_time', 1, 60, 0],
+        ['Essens-/Verpflegungszuschuss', 'Unterstuetzung fuer Mahlzeiten und gesunde Ernaehrung.', 'Ernaehrung', 600, 'monthly_12', 1, 70, 1],
+    ];
+
+    $insert = $pdo->prepare("
+        INSERT INTO bb_benefits (
+            benefit_year_id, title, description, category, fixed_amount, payout_mode,
+            receipt_required, active, sort_order, is_default_auto_assignment, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+    ");
+
+    foreach ($benefits as $benefit) {
+        $insert->execute([
+            $benefitYearId,
+            $benefit[0],
+            $benefit[1],
+            $benefit[2],
+            $benefit[3],
+            $benefit[4],
+            $benefit[5],
+            $benefit[6],
+            $benefit[7],
+            $now,
+            $now,
+        ]);
+    }
 }
 
 function now_sql(): string
@@ -312,6 +469,240 @@ function safe_user(array $user): array
         'lastLoginAt' => $user['last_login_at'],
         'isAdmin' => (bool)$user['is_admin'],
         'eligibleFrom' => null,
+    ];
+}
+
+function safe_benefit_year(array $year): array
+{
+    return [
+        'id' => (string)$year['id'],
+        'year' => (int)$year['year'],
+        'annualBudget' => (float)$year['annual_budget'],
+        'processOpenDate' => $year['process_open_date'],
+        'submissionDeadline' => $year['submission_deadline'],
+        'reminderDate' => $year['reminder_date'],
+        'autoAssignmentDate' => $year['auto_assignment_date'],
+        'status' => $year['status'],
+        'allowCustomBenefits' => (bool)$year['allow_custom_benefits'],
+    ];
+}
+
+function safe_benefit(array $benefit): array
+{
+    return [
+        'id' => (string)$benefit['id'],
+        'benefitYearId' => (string)$benefit['benefit_year_id'],
+        'title' => $benefit['title'],
+        'description' => $benefit['description'],
+        'category' => $benefit['category'],
+        'fixedAmount' => (float)$benefit['fixed_amount'],
+        'payoutMode' => $benefit['payout_mode'],
+        'receiptRequired' => (bool)$benefit['receipt_required'],
+        'active' => (bool)$benefit['active'],
+        'sortOrder' => (int)$benefit['sort_order'],
+        'isDefaultAutoAssignment' => (bool)$benefit['is_default_auto_assignment'],
+    ];
+}
+
+function safe_submission(array $submission): array
+{
+    return [
+        'id' => (string)$submission['id'],
+        'employeeId' => (string)$submission['user_id'],
+        'benefitYearId' => (string)$submission['benefit_year_id'],
+        'status' => $submission['status'],
+        'submittedAt' => $submission['submitted_at'],
+        'totalSelectedAmount' => (float)$submission['total_selected_amount'],
+        'coveredByCompanyAmount' => (float)$submission['covered_by_company_amount'],
+        'employeeOwnContributionAmount' => (float)$submission['employee_own_contribution_amount'],
+        'remainingBudget' => (float)$submission['remaining_budget'],
+        'monthlyPayoutAmount' => (float)$submission['monthly_payout_amount'],
+        'adminComment' => $submission['admin_comment'],
+        'needsInfoReason' => $submission['needs_info_reason'],
+        'createdAt' => $submission['created_at'],
+        'updatedAt' => $submission['updated_at'],
+    ];
+}
+
+function safe_selected_benefit(array $selected): array
+{
+    $benefit = null;
+    if (!empty($selected['benefit_title'])) {
+        $benefit = [
+            'id' => (string)$selected['benefit_id'],
+            'title' => $selected['benefit_title'],
+            'description' => $selected['benefit_description'],
+            'category' => $selected['benefit_category'],
+            'fixedAmount' => (float)$selected['benefit_fixed_amount'],
+            'payoutMode' => $selected['benefit_payout_mode'],
+            'receiptRequired' => (bool)$selected['benefit_receipt_required'],
+        ];
+    }
+
+    return [
+        'id' => (string)$selected['id'],
+        'submissionId' => (string)$selected['submission_id'],
+        'benefitId' => $selected['benefit_id'] ? (string)$selected['benefit_id'] : null,
+        'isCustomBenefit' => (bool)$selected['is_custom_benefit'],
+        'customTitle' => $selected['custom_title'],
+        'customDescription' => $selected['custom_description'],
+        'requestedAmount' => (float)$selected['requested_amount'],
+        'coveredAmount' => (float)$selected['covered_amount'],
+        'ownContributionAmount' => (float)$selected['own_contribution_amount'],
+        'payoutMode' => $selected['payout_mode'],
+        'monthlyAmount' => (float)$selected['monthly_amount'],
+        'status' => $selected['status'],
+        'benefit' => $benefit,
+    ];
+}
+
+function safe_attachment(array $attachment): array
+{
+    return [
+        'id' => (string)$attachment['id'],
+        'selectedBenefitId' => (string)$attachment['selected_benefit_id'],
+        'employeeId' => (string)$attachment['user_id'],
+        'fileName' => $attachment['file_name'],
+        'fileType' => $attachment['file_type'],
+        'uploadedAt' => $attachment['uploaded_at'],
+    ];
+}
+
+function current_benefit_year(): array
+{
+    $stmt = db()->query("SELECT * FROM bb_benefit_years WHERE status = 'open' ORDER BY year DESC LIMIT 1");
+    $year = $stmt->fetch();
+    if ($year) {
+        return $year;
+    }
+
+    $stmt = db()->query("SELECT * FROM bb_benefit_years ORDER BY year DESC LIMIT 1");
+    $year = $stmt->fetch();
+    if ($year) {
+        return $year;
+    }
+
+    seed_benefit_data(db());
+    return current_benefit_year();
+}
+
+function get_or_create_submission(int $userId, int $benefitYearId): array
+{
+    $stmt = db()->prepare('SELECT * FROM bb_submissions WHERE user_id = ? AND benefit_year_id = ? LIMIT 1');
+    $stmt->execute([$userId, $benefitYearId]);
+    $submission = $stmt->fetch();
+    if ($submission) {
+        return $submission;
+    }
+
+    $year = current_benefit_year();
+    $now = now_sql();
+    db()->prepare("
+        INSERT INTO bb_submissions (
+            user_id, benefit_year_id, status, remaining_budget, created_at, updated_at
+        ) VALUES (?, ?, 'draft', ?, ?, ?)
+    ")->execute([$userId, $benefitYearId, (float)$year['annual_budget'], $now, $now]);
+
+    return find_submission_by_id((int)db()->lastInsertId());
+}
+
+function find_submission_by_id(int $id): ?array
+{
+    $stmt = db()->prepare('SELECT * FROM bb_submissions WHERE id = ? LIMIT 1');
+    $stmt->execute([$id]);
+    $submission = $stmt->fetch();
+    return $submission ?: null;
+}
+
+function load_selected_benefits(int $submissionId): array
+{
+    $stmt = db()->prepare("
+        SELECT
+            sb.*,
+            b.title benefit_title,
+            b.description benefit_description,
+            b.category benefit_category,
+            b.fixed_amount benefit_fixed_amount,
+            b.payout_mode benefit_payout_mode,
+            b.receipt_required benefit_receipt_required
+        FROM bb_selected_benefits sb
+        LEFT JOIN bb_benefits b ON b.id = sb.benefit_id
+        WHERE sb.submission_id = ?
+        ORDER BY sb.id ASC
+    ");
+    $stmt->execute([$submissionId]);
+    return $stmt->fetchAll();
+}
+
+function load_attachments_for_user(int $userId): array
+{
+    $stmt = db()->prepare('SELECT * FROM bb_attachments WHERE user_id = ? ORDER BY uploaded_at DESC');
+    $stmt->execute([$userId]);
+    return $stmt->fetchAll();
+}
+
+function recalculate_submission(int $submissionId): array
+{
+    $submission = find_submission_by_id($submissionId);
+    if (!$submission) {
+        throw new RuntimeException('submission_not_found');
+    }
+
+    $yearStmt = db()->prepare('SELECT * FROM bb_benefit_years WHERE id = ? LIMIT 1');
+    $yearStmt->execute([$submission['benefit_year_id']]);
+    $year = $yearStmt->fetch();
+    $budget = $year ? (float)$year['annual_budget'] : 1000.0;
+    $remaining = $budget;
+    $total = 0.0;
+    $coveredTotal = 0.0;
+    $ownTotal = 0.0;
+    $monthlyTotal = 0.0;
+
+    $items = load_selected_benefits($submissionId);
+    foreach ($items as $item) {
+        $amount = max(0.0, (float)$item['requested_amount']);
+        $covered = min($remaining, $amount);
+        $own = max(0.0, $amount - $covered);
+        $monthly = $item['payout_mode'] === 'monthly_12' ? round($covered / 12, 2) : 0.0;
+        $remaining = max(0.0, $remaining - $covered);
+        $total += $amount;
+        $coveredTotal += $covered;
+        $ownTotal += $own;
+        $monthlyTotal += $monthly;
+
+        db()->prepare("
+            UPDATE bb_selected_benefits
+            SET covered_amount = ?, own_contribution_amount = ?, monthly_amount = ?, updated_at = ?
+            WHERE id = ?
+        ")->execute([$covered, $own, $monthly, now_sql(), $item['id']]);
+    }
+
+    db()->prepare("
+        UPDATE bb_submissions
+        SET total_selected_amount = ?, covered_by_company_amount = ?,
+            employee_own_contribution_amount = ?, remaining_budget = ?,
+            monthly_payout_amount = ?, updated_at = ?
+        WHERE id = ?
+    ")->execute([$total, $coveredTotal, $ownTotal, $remaining, $monthlyTotal, now_sql(), $submissionId]);
+
+    return find_submission_by_id($submissionId);
+}
+
+function benefit_payload_for_user(array $user): array
+{
+    $year = current_benefit_year();
+    $submission = get_or_create_submission((int)$user['id'], (int)$year['id']);
+
+    $benefitsStmt = db()->prepare('SELECT * FROM bb_benefits WHERE benefit_year_id = ? AND active = 1 ORDER BY sort_order ASC, id ASC');
+    $benefitsStmt->execute([$year['id']]);
+
+    return [
+        'success' => true,
+        'benefitYear' => safe_benefit_year($year),
+        'submission' => safe_submission(recalculate_submission((int)$submission['id'])),
+        'benefits' => array_map('safe_benefit', $benefitsStmt->fetchAll()),
+        'selectedBenefits' => array_map('safe_selected_benefit', load_selected_benefits((int)$submission['id'])),
+        'attachments' => array_map('safe_attachment', load_attachments_for_user((int)$user['id'])),
     ];
 }
 
@@ -754,6 +1145,220 @@ function handle_validate_token(): void
     json_response(['valid' => false]);
 }
 
+function handle_benefits_overview(): void
+{
+    $user = require_user();
+    json_response(benefit_payload_for_user($user));
+}
+
+function ensure_editable_submission(array $submission): void
+{
+    if (!in_array($submission['status'], ['draft', 'needs_info'], true)) {
+        json_response(['success' => false, 'error' => 'Diese Einreichung kann aktuell nicht bearbeitet werden.', 'errorCode' => 'submission_locked'], 409);
+    }
+}
+
+function handle_select_benefit(): void
+{
+    $user = require_user();
+    $body = request_json();
+    $benefitId = (int)($body['benefitId'] ?? 0);
+
+    $year = current_benefit_year();
+    $submission = get_or_create_submission((int)$user['id'], (int)$year['id']);
+    ensure_editable_submission($submission);
+
+    $benefitStmt = db()->prepare('SELECT * FROM bb_benefits WHERE id = ? AND benefit_year_id = ? AND active = 1 LIMIT 1');
+    $benefitStmt->execute([$benefitId, $year['id']]);
+    $benefit = $benefitStmt->fetch();
+    if (!$benefit) {
+        json_response(['success' => false, 'error' => 'Benefit wurde nicht gefunden.', 'errorCode' => 'benefit_not_found'], 404);
+    }
+
+    $existsStmt = db()->prepare('SELECT id FROM bb_selected_benefits WHERE submission_id = ? AND benefit_id = ? LIMIT 1');
+    $existsStmt->execute([$submission['id'], $benefitId]);
+    if ($existsStmt->fetch()) {
+        json_response(benefit_payload_for_user($user));
+    }
+
+    $now = now_sql();
+    db()->prepare("
+        INSERT INTO bb_selected_benefits (
+            submission_id, benefit_id, is_custom_benefit, requested_amount, payout_mode, status, created_at, updated_at
+        ) VALUES (?, ?, 0, ?, ?, 'selected', ?, ?)
+    ")->execute([$submission['id'], $benefitId, (float)$benefit['fixed_amount'], $benefit['payout_mode'], $now, $now]);
+
+    log_auth('benefit_selected', $user['email'], 'success', null, $benefit['title']);
+    json_response(benefit_payload_for_user($user));
+}
+
+function handle_add_custom_benefit(): void
+{
+    $user = require_user();
+    $body = request_json();
+    $title = trim((string)($body['title'] ?? ''));
+    $description = trim((string)($body['description'] ?? ''));
+    $amount = (float)($body['amount'] ?? 0);
+
+    if ($title === '' || $amount <= 0) {
+        json_response(['success' => false, 'error' => 'Bitte Titel und Betrag angeben.', 'errorCode' => 'invalid_custom_benefit'], 400);
+    }
+
+    $year = current_benefit_year();
+    if (empty($year['allow_custom_benefits'])) {
+        json_response(['success' => false, 'error' => 'Eigene Benefits sind aktuell nicht freigegeben.', 'errorCode' => 'custom_benefits_disabled'], 409);
+    }
+
+    $submission = get_or_create_submission((int)$user['id'], (int)$year['id']);
+    ensure_editable_submission($submission);
+
+    $now = now_sql();
+    db()->prepare("
+        INSERT INTO bb_selected_benefits (
+            submission_id, is_custom_benefit, custom_title, custom_description,
+            requested_amount, payout_mode, status, created_at, updated_at
+        ) VALUES (?, 1, ?, ?, ?, 'one_time', 'pending_hr_review', ?, ?)
+    ")->execute([$submission['id'], $title, $description, $amount, $now, $now]);
+
+    log_auth('custom_benefit_added', $user['email'], 'success', null, $title);
+    json_response(benefit_payload_for_user($user));
+}
+
+function handle_remove_selected_benefit(): void
+{
+    $user = require_user();
+    $body = request_json();
+    $selectedBenefitId = (int)($body['selectedBenefitId'] ?? 0);
+    $year = current_benefit_year();
+    $submission = get_or_create_submission((int)$user['id'], (int)$year['id']);
+    ensure_editable_submission($submission);
+
+    db()->prepare('DELETE FROM bb_selected_benefits WHERE id = ? AND submission_id = ?')->execute([$selectedBenefitId, $submission['id']]);
+    recalculate_submission((int)$submission['id']);
+    json_response(benefit_payload_for_user($user));
+}
+
+function handle_upload_attachment(): void
+{
+    $user = require_user();
+    $selectedBenefitId = (int)($_POST['selectedBenefitId'] ?? 0);
+    if (!$selectedBenefitId || empty($_FILES['file'])) {
+        json_response(['success' => false, 'error' => 'Datei fehlt.', 'errorCode' => 'missing_file'], 400);
+    }
+
+    $year = current_benefit_year();
+    $submission = get_or_create_submission((int)$user['id'], (int)$year['id']);
+    ensure_editable_submission($submission);
+
+    $ownedStmt = db()->prepare('SELECT id FROM bb_selected_benefits WHERE id = ? AND submission_id = ? LIMIT 1');
+    $ownedStmt->execute([$selectedBenefitId, $submission['id']]);
+    if (!$ownedStmt->fetch()) {
+        json_response(['success' => false, 'error' => 'Benefit wurde nicht gefunden.', 'errorCode' => 'selected_benefit_not_found'], 404);
+    }
+
+    $file = $_FILES['file'];
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        json_response(['success' => false, 'error' => 'Upload fehlgeschlagen.', 'errorCode' => 'upload_failed'], 400);
+    }
+
+    $originalName = basename((string)$file['name']);
+    $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+    $allowed = ['pdf', 'jpg', 'jpeg', 'png', 'docx'];
+    if (!in_array($extension, $allowed, true)) {
+        json_response(['success' => false, 'error' => 'Dateityp ist nicht erlaubt.', 'errorCode' => 'invalid_file_type'], 400);
+    }
+
+    $uploadDir = __DIR__ . '/uploads';
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+
+    $storedName = $user['id'] . '-' . $selectedBenefitId . '-' . bin2hex(random_bytes(8)) . '.' . $extension;
+    $target = $uploadDir . '/' . $storedName;
+    if (!move_uploaded_file($file['tmp_name'], $target)) {
+        json_response(['success' => false, 'error' => 'Upload konnte nicht gespeichert werden.', 'errorCode' => 'upload_store_failed'], 500);
+    }
+
+    $now = now_sql();
+    db()->prepare("
+        INSERT INTO bb_attachments (
+            selected_benefit_id, user_id, file_name, file_path, file_type, uploaded_at, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    ")->execute([$selectedBenefitId, $user['id'], $originalName, 'uploads/' . $storedName, (string)$file['type'], $now, $now]);
+
+    json_response(benefit_payload_for_user($user));
+}
+
+function handle_save_submission_draft(): void
+{
+    $user = require_user();
+    $year = current_benefit_year();
+    $submission = get_or_create_submission((int)$user['id'], (int)$year['id']);
+    ensure_editable_submission($submission);
+    db()->prepare("UPDATE bb_submissions SET status = 'draft', updated_at = ? WHERE id = ?")->execute([now_sql(), $submission['id']]);
+    json_response(benefit_payload_for_user($user));
+}
+
+function handle_submit_submission(): void
+{
+    $user = require_user();
+    $body = request_json();
+    $year = current_benefit_year();
+    $submission = recalculate_submission((int)get_or_create_submission((int)$user['id'], (int)$year['id'])['id']);
+    ensure_editable_submission($submission);
+
+    $selected = load_selected_benefits((int)$submission['id']);
+    if (!$selected) {
+        json_response(['success' => false, 'error' => 'Bitte waehle mindestens einen Benefit aus.', 'errorCode' => 'no_benefits_selected'], 400);
+    }
+
+    if ((float)$submission['employee_own_contribution_amount'] > 0 && empty($body['confirmOwnContribution'])) {
+        json_response(['success' => false, 'error' => 'Bitte bestaetige den Eigenanteil.', 'errorCode' => 'own_contribution_not_confirmed'], 400);
+    }
+
+    $attachments = load_attachments_for_user((int)$user['id']);
+    $attachedIds = array_map(function ($attachment) {
+        return (int)$attachment['selected_benefit_id'];
+    }, $attachments);
+    foreach ($selected as $item) {
+        if (!empty($item['benefit_receipt_required']) && !in_array((int)$item['id'], $attachedIds, true)) {
+            json_response(['success' => false, 'error' => 'Bitte lade alle erforderlichen Nachweise hoch.', 'errorCode' => 'missing_receipts'], 400);
+        }
+    }
+
+    db()->prepare("UPDATE bb_submissions SET status = 'submitted', submitted_at = ?, updated_at = ? WHERE id = ?")
+        ->execute([now_sql(), now_sql(), $submission['id']]);
+
+    $submitted = recalculate_submission((int)$submission['id']);
+    send_submission_notifications($user, $year, $submitted, load_selected_benefits((int)$submission['id']));
+    log_auth('submission_submitted', $user['email'], 'success');
+    json_response(benefit_payload_for_user($user));
+}
+
+function send_submission_notifications(array $user, array $year, array $submission, array $selected): void
+{
+    if (!email_configured()) {
+        return;
+    }
+
+    $rows = '';
+    foreach ($selected as $item) {
+        $title = $item['is_custom_benefit'] ? $item['custom_title'] : $item['benefit_title'];
+        $rows .= '<li>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . ': ' . number_format((float)$item['requested_amount'], 2, ',', '.') . ' EUR</li>';
+    }
+
+    $html = '<p>Eine Benefit-Bar Einreichung wurde final eingereicht.</p>'
+        . '<p><strong>User:</strong> ' . htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8') . '</p>'
+        . '<p><strong>Benefit-Jahr:</strong> ' . (int)$year['year'] . '</p>'
+        . '<ul>' . $rows . '</ul>'
+        . '<p><strong>Gesamt:</strong> ' . number_format((float)$submission['total_selected_amount'], 2, ',', '.') . ' EUR<br>'
+        . '<strong>Unternehmensanteil:</strong> ' . number_format((float)$submission['covered_by_company_amount'], 2, ',', '.') . ' EUR<br>'
+        . '<strong>Eigenanteil:</strong> ' . number_format((float)$submission['employee_own_contribution_amount'], 2, ',', '.') . ' EUR</p>';
+
+    send_email(config_value('HR_NOTIFICATION_EMAIL', 'prozessmanagement@eduscho.at'), 'Benefit-Bar Einreichung', $html, 'submission_notification', (int)$user['id']);
+    send_email($user['email'], 'Tchibo Benefit-Bar - Einreichung erhalten', '<p>Deine Einreichung wurde erfolgreich uebermittelt und wird geprueft.</p>', 'user_confirmation', (int)$user['id']);
+}
+
 function handle_admin_create_user(): void
 {
     $setupKey = config_value('SETUP_KEY');
@@ -983,6 +1588,14 @@ try {
         redirect_to('https://login.microsoftonline.com/' . config_value('MICROSOFT_TENANT_ID') . '/oauth2/v2.0/authorize?' . $params);
     }
     if ($method === 'GET' && $path === '/auth/microsoft/callback') handle_microsoft_callback();
+
+    if ($method === 'GET' && $path === '/benefits/overview') handle_benefits_overview();
+    if ($method === 'POST' && $path === '/benefits/select') handle_select_benefit();
+    if ($method === 'POST' && $path === '/benefits/custom') handle_add_custom_benefit();
+    if ($method === 'POST' && $path === '/benefits/remove') handle_remove_selected_benefit();
+    if ($method === 'POST' && $path === '/attachments/upload') handle_upload_attachment();
+    if ($method === 'POST' && $path === '/submission/save-draft') handle_save_submission_draft();
+    if ($method === 'POST' && $path === '/submission/submit') handle_submit_submission();
 
     if ($method === 'GET' && $path === '/admin/users') {
         require_admin();
