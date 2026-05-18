@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-smtp-delivery-diagnostics-v17';
+const BENEFITBAR_API_VERSION = '2026-05-18-mail-transport-switch-v18';
 
 header('X-Content-Type-Options: nosniff');
 
@@ -904,12 +904,28 @@ function require_admin(): array
 
 function email_configured(): bool
 {
+    $transport = mail_transport();
+
+    if ($transport === 'php') {
+        return allow_php_mail() && native_mail_available();
+    }
+
     return smtp_config_error() === null || (allow_php_mail() && native_mail_available());
 }
 
 function smtp_configured(): bool
 {
     return smtp_config_error() === null;
+}
+
+function mail_transport(): string
+{
+    $transport = strtolower(trim(config_value('MAIL_TRANSPORT')));
+    if (in_array($transport, ['smtp', 'php'], true)) {
+        return $transport;
+    }
+
+    return smtp_configured() ? 'smtp' : 'php';
 }
 
 function smtp_config_error(): ?array
@@ -975,6 +991,16 @@ function default_email_from(): string
 
     $host = parse_url(config_value('FRONTEND_URL'), PHP_URL_HOST) ?: ($_SERVER['HTTP_HOST'] ?? 'localhost');
     return normalized_email_from('no-reply@' . $host);
+}
+
+function php_mail_from(): string
+{
+    $configured = config_value('PHP_MAIL_FROM');
+    if ($configured !== '') {
+        return normalized_email_from($configured);
+    }
+
+    return default_email_from();
 }
 
 function normalized_email_from(string $value): string
@@ -1076,7 +1102,7 @@ function send_native_mail(string $recipient, string $subject, string $html, arra
         throw new RuntimeException('PHP mail() is not available on this hosting plan');
     }
 
-    $from = default_email_from();
+    $from = php_mail_from();
     $contentType = '';
     $body = build_email_body($html, $attachments, $contentType);
     $headers = [
@@ -1097,7 +1123,7 @@ function send_native_mail(string $recipient, string $subject, string $html, arra
         throw new RuntimeException('PHP mail() returned false');
     }
 
-    return 'PHP mail accepted the message for local delivery.';
+    return 'PHP mail accepted the message for local delivery from ' . email_address($from) . '.';
 }
 
 function smtp_read($socket): string
@@ -1198,7 +1224,9 @@ function email_address(string $value): string
 function send_email(string $recipient, string $subject, string $html, string $type, ?int $userId = null, array $attachments = []): array
 {
     if (!email_configured()) {
-        $configError = smtp_config_error();
+        $configError = mail_transport() === 'php'
+            ? ['code' => 'php_mail_not_available', 'message' => 'PHP mail transport is selected but ALLOW_PHP_MAIL is disabled or mail() is unavailable.']
+            : smtp_config_error();
         $message = $configError['message'] ?? 'SMTP configuration missing. PHP mail() fallback is disabled because it cannot guarantee delivery on this hosting plan.';
         $code = $configError['code'] ?? 'email_not_configured';
         log_email($recipient, $subject, $type, 'failed', $message, $userId);
@@ -1206,7 +1234,9 @@ function send_email(string $recipient, string $subject, string $html, string $ty
     }
 
     try {
-        if (smtp_configured()) {
+        if (mail_transport() === 'php') {
+            $deliveryDetail = send_native_mail($recipient, $subject, $html, $attachments);
+        } elseif (smtp_configured()) {
             $deliveryDetail = send_smtp($recipient, $subject, $html, $attachments);
         } else {
             $deliveryDetail = send_native_mail($recipient, $subject, $html, $attachments);
@@ -2122,6 +2152,7 @@ function handle_admin_system_check(): void
         FROM bb_users
     ")->fetch() ?: [];
     $smtp = [
+        'MAIL_TRANSPORT' => mail_transport(),
         'SMTP_HOST' => config_value('SMTP_HOST') !== '',
         'SMTP_PORT' => config_value('SMTP_PORT') !== '',
         'SMTP_USER' => config_value('SMTP_USER') !== '',
@@ -2129,6 +2160,8 @@ function handle_admin_system_check(): void
         'SMTP_FROM' => config_value('SMTP_FROM') !== '',
         'SMTP_SECURE' => config_value('SMTP_SECURE') !== '',
         'ALLOW_PHP_MAIL' => allow_php_mail(),
+        'PHP_MAIL_FROM' => config_value('PHP_MAIL_FROM') !== '',
+        'PHP_MAIL_AVAILABLE' => native_mail_available(),
     ];
     $smtpIssue = smtp_config_error();
     $loginErrorsStmt = db()->query("
