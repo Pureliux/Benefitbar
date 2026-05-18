@@ -43,14 +43,14 @@ const HelpPage = () => {
       <Header />
 
       <main className="benefit-ambient-bg min-h-[calc(100vh-4rem)] py-8 text-[#222222] transition-colors dark:text-[#F7F2E8]">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <p className="text-sm font-semibold uppercase text-[#C0A468]">Support</p>
             <h1 className="mt-1 text-3xl font-bold sm:text-4xl">Hilfe & FAQ</h1>
             <p className="mt-2 text-sm text-muted-foreground">Die wichtigsten Fragen zur Benefit-Bar kompakt beantwortet.</p>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
             <section className="rounded-lg border border-border bg-card/95 p-6 shadow-sm backdrop-blur-sm dark:bg-card/92">
               <h2 className="mb-6 text-2xl font-bold">Häufig gestellte Fragen</h2>
               <div className="space-y-2">
@@ -73,13 +73,22 @@ const HelpPage = () => {
                   </div>
                 ))}
               </div>
+              <p className="mt-6 rounded-lg border border-[#D8C894]/70 bg-[#F7F2E8] p-4 text-sm text-[#5E5A52] dark:border-border dark:bg-[#20242A] dark:text-[#D8DCE3]">
+                Bei weiteren Fragen wenden Sie sich bitte an{' '}
+                <a
+                  href="https://prozessmanagement.eduscho.at"
+                  className="font-semibold text-[#8B7138] underline-offset-4 hover:underline dark:text-[#EDD38E]"
+                >
+                  prozessmanagement.eduscho.at
+                </a>.
+              </p>
             </section>
 
-            <figure className="sticky top-24 hidden h-[31rem] overflow-hidden rounded-lg border border-[#D8C894]/80 bg-[#F7EAC3] shadow-xl lg:block dark:border-border dark:bg-[#20242A]">
+            <figure className="sticky top-24 hidden h-[33rem] overflow-hidden rounded-lg border border-[#D8C894]/80 bg-[#F7EAC3] p-3 shadow-xl lg:block dark:border-border dark:bg-[#20242A]">
               <img
                 src="/brand/superbean-help.png"
                 alt="Super Bean Maskottchen der Benefit-Bar"
-                className="h-full w-full translate-x-[-10%] scale-110 object-cover object-top opacity-95"
+                className="h-full w-full object-contain object-center opacity-95"
               />
             </figure>
           </div>

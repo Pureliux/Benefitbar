@@ -21,7 +21,7 @@ const benefitCards = [
   {
     label: 'Mobilität',
     image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=900&q=80',
-    className: 'left-[17.5%] top-[34%] rotate-2 hidden xl:block',
+    className: 'left-[17.5%] top-[38%] rotate-2 hidden xl:block',
     objectPosition: 'center',
   },
   {
@@ -32,14 +32,14 @@ const benefitCards = [
   },
   {
     label: 'Weiterbildung',
-    image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=80',
+    image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=900&q=80',
     className: 'right-[5.5%] top-[4%] rotate-3 hidden xl:block',
     objectPosition: 'center',
   },
   {
     label: 'Homeoffice',
     image: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=900&q=80',
-    className: 'right-[17.5%] top-[34%] -rotate-2 hidden xl:block',
+    className: 'right-[17.5%] top-[38%] -rotate-2 hidden xl:block',
     objectPosition: 'center',
   },
   {
@@ -60,8 +60,8 @@ function BenefitImageCard({ card, compact = false }) {
     <div
       className={
         compact
-          ? 'relative h-28 w-48 overflow-hidden rounded-lg border-[6px] border-white bg-white shadow-xl ring-1 ring-black/5 dark:border-[#30333A] dark:bg-[#30333A] dark:ring-white/10'
-          : `absolute h-[13.5rem] w-[23rem] overflow-hidden rounded-lg border-[8px] border-white bg-white shadow-2xl ring-1 ring-black/5 dark:border-[#30333A] dark:bg-[#30333A] dark:ring-white/10 2xl:h-56 2xl:w-96 ${card.className}`
+          ? 'relative h-28 w-48 overflow-hidden rounded-lg border-[6px] border-white bg-white shadow-xl ring-1 ring-black/5 dark:ring-white/10'
+          : `absolute h-[13.5rem] w-[23rem] overflow-hidden rounded-lg border-[8px] border-white bg-white shadow-2xl ring-1 ring-black/5 dark:ring-white/10 2xl:h-56 2xl:w-96 ${card.className}`
       }
       aria-hidden="true"
     >
@@ -164,7 +164,12 @@ const LoginPage = () => {
       <Header />
 
       <main className="benefit-ambient-bg relative min-h-[calc(100vh-4rem)] overflow-hidden px-4 py-8 text-[#222222] transition-colors duration-300 dark:text-[#F7F2E8] sm:py-10">
-        <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.34),transparent_34rem)] dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06),transparent_34rem)]" />
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          <div className="absolute -left-28 top-4 h-[36rem] w-[36rem] rounded-full bg-[#C0A468]/18 blur-3xl dark:bg-[#C0A468]/10" />
+          <div className="absolute right-[4%] top-[18%] h-[30rem] w-[34rem] rounded-full bg-[#EDD38E]/22 blur-3xl dark:bg-[#EDD38E]/9" />
+          <div className="absolute bottom-[-11rem] left-[22%] h-[32rem] w-[48rem] rounded-full bg-[#719C6F]/10 blur-3xl dark:bg-[#719C6F]/7" />
+          <div className="absolute left-[48%] top-[12%] h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-white/35 blur-3xl dark:bg-white/6" />
+        </div>
         <div className="pointer-events-none absolute inset-x-0 top-7 hidden justify-between px-8 lg:flex xl:hidden">
           {tabletCards.map((card) => (
             <BenefitImageCard key={`tablet-${card.label}`} card={card} compact />
@@ -251,7 +256,7 @@ const LoginPage = () => {
                   <Button
                     type="submit"
                     disabled={Boolean(loadingAction)}
-                    className="w-full bg-[#C0A468] text-white shadow-md shadow-[#C0A468]/20 hover:bg-[#A98D52] dark:bg-[#B99A56] dark:text-white dark:hover:bg-[#C0A468]"
+                    className="h-12 w-full bg-[#C0A468] text-base font-semibold text-white shadow-md shadow-[#C0A468]/20 hover:bg-[#A98D52] dark:bg-[#B99A56] dark:text-white dark:hover:bg-[#C0A468]"
                   >
                     {loadingAction === 'login' ? 'Anmeldung läuft …' : 'Einloggen'}
                   </Button>

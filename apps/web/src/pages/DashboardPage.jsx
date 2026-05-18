@@ -86,7 +86,7 @@ const DashboardPage = () => {
     }
     return segments.length ? segments : [{ name: 'Noch verfügbar', value: totalBudget, color: '#E8E2D6' }];
   }, [remainingBudget, selectedBenefits, totalBudget]);
-  const chartDetail = activeChartItem || { name: 'Noch verfügbar', value: remainingBudget, color: '#E8E2D6' };
+  const chartDetail = activeChartItem;
   const handleChartEnter = (entry) => setActiveChartItem(entry?.payload || entry);
 
   if (loading) {
@@ -177,15 +177,17 @@ const DashboardPage = () => {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-border bg-background p-3 shadow-sm dark:bg-muted/30">
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: chartDetail.color }} />
-                    <span className="truncate font-medium">{chartDetail.name}</span>
-                  </span>
-                  <span className="shrink-0 font-bold">{currency.format(chartDetail.value || 0)}</span>
+              {chartDetail && (
+                <div className="rounded-lg border border-border bg-background p-3 shadow-sm dark:bg-muted/30">
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: chartDetail.color }} />
+                      <span className="truncate font-medium">{chartDetail.name}</span>
+                    </span>
+                    <span className="shrink-0 font-bold">{currency.format(chartDetail.value || 0)}</span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="mt-4 space-y-3">
                 {chartData.map((entry) => (
