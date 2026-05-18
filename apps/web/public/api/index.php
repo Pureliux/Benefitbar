@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-allowed-email-smtp-v20';
+const BENEFITBAR_API_VERSION = '2026-05-18-activation-email-link-only-v21';
 const LOGIN_EMAIL_ERROR_MESSAGE = 'Bitte verwende deine @eduscho.at-Adresse oder eine freigegebene E-Mail-Adresse.';
 
 header('X-Content-Type-Options: nosniff');
@@ -1365,10 +1365,9 @@ function activation_email(array $user, string $token): array
             <p style=\"margin:24px 0;\">
                 <a href=\"{$linkHtml}\" style=\"display:inline-block;background:#C0A468;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:8px;\">Passwort setzen</a>
             </p>
-            <p style=\"word-break:break-all;\"><a href=\"{$linkHtml}\" style=\"color:#8B7138;\">{$linkHtml}</a></p>
             <p>Dieser Link ist nur 24 Stunden gültig.</p>
             <p>Falls du diesen Link nicht angefordert hast, kannst du diese E-Mail ignorieren.</p>
-            <p>Mit freundlichen Grüßen<br>dein Benefit Bar Team</p>
+            <p>Mit freundlichen Grüßen<br>dein Benefitbar-Team</p>
         </div>
     ";
     return send_email($user['email'], 'Aktivierungslink für die Tchibo Benefit Bar', $html, 'activation_email', (int)$user['id']);

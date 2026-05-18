@@ -322,7 +322,7 @@ export async function sendActivationEmail(user, token) {
     <p><a href="${activationLink}" style="background:#C0A468;color:#ffffff;padding:12px 18px;text-decoration:none;border-radius:6px;display:inline-block;">Passwort setzen</a></p>
     <p>Der Link ist 24 Stunden gültig und kann nur einmal verwendet werden.</p>
     <p>Falls du diese Anfrage nicht gestellt hast, ignoriere diese E-Mail.</p>
-    <p>Viele Grüße<br>HR/Prozessmanagement</p>
+    <p>Mit freundlichen Grüßen<br>dein Benefitbar-Team</p>
   `;
 
   return sendEmail({

@@ -78,12 +78,16 @@ const ActivationPage = () => {
     setIsLoading(false);
   };
 
-  const RequirementItem = ({ met, text }) => (
-    <div className={`flex items-center gap-2 text-sm transition-colors ${met ? 'text-success' : 'text-muted-foreground'}`}>
-      {met ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-      <span>{text}</span>
-    </div>
-  );
+  const RequirementItem = ({ met, text }) => {
+    const stateColor = met ? '#2E7D32' : '#D32F2F';
+
+    return (
+      <div className="flex items-center gap-2 text-sm transition-colors" style={{ color: stateColor }}>
+        {met ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+        <span>{text}</span>
+      </div>
+    );
+  };
 
   return (
     <>
