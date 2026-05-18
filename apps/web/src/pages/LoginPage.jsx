@@ -24,35 +24,35 @@ const benefitCards = [
     image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=900&q=80',
     className: 'left-[calc(17.5%_-_2.5rem)] top-[38%] rotate-2 hidden xl:block',
     objectPosition: 'center',
-    pinColor: '#719C6F',
+    pinColor: '#4F6D8A',
   },
   {
     label: 'Fitness',
     image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=900&q=80',
     className: 'left-[6%] bottom-[5%] -rotate-2 hidden xl:block',
     objectPosition: 'center',
-    pinColor: '#4F6D8A',
+    pinColor: '#719C6F',
   },
   {
     label: 'Weiterbildung',
     image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=900&q=80',
     className: 'right-[5.5%] top-[4%] rotate-3 hidden xl:block',
     objectPosition: 'center',
-    pinColor: '#C0A468',
+    pinColor: '#E4C35A',
   },
   {
     label: 'Homeoffice',
     image: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=900&q=80',
     className: 'right-[calc(17.5%_-_2.5rem)] top-[38%] -rotate-2 hidden xl:block',
     objectPosition: 'center',
-    pinColor: '#7E6BA8',
+    pinColor: '#E08A5B',
   },
   {
     label: 'Ernährung',
     image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=900&q=80',
     className: 'right-[6%] bottom-[5%] rotate-2 hidden xl:block',
     objectPosition: 'center',
-    pinColor: '#E08A5B',
+    pinColor: '#7E6BA8',
   },
 ];
 
@@ -71,8 +71,10 @@ function BenefitImageCard({ card, compact = false }) {
       }
       aria-hidden="true"
     >
-      <div className="absolute left-1/2 top-[-0.35rem] z-20 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
-        <span className="absolute left-1/2 top-3 z-0 h-8 w-[2px] -translate-x-1/2 rotate-12 rounded-full bg-[#111111] shadow-[0_0.2rem_0.35rem_rgba(0,0,0,0.35)]" />
+      <div className="absolute left-1/2 top-[-0.7rem] z-20 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+        <span className="absolute left-1/2 top-3 z-0 h-5 w-[2px] -translate-x-1/2 rounded-b-full bg-[#111111] shadow-[0_0.2rem_0.25rem_rgba(0,0,0,0.35)]">
+          <span className="absolute bottom-[-3px] left-1/2 h-0 w-0 -translate-x-1/2 border-x-[3px] border-t-[5px] border-x-transparent border-t-[#111111]" />
+        </span>
         <span
           className="relative z-10 h-6 w-6 rounded-full border-2 border-white shadow-[0_0.55rem_1rem_rgba(34,34,34,0.32),inset_0_0.2rem_0.35rem_rgba(255,255,255,0.55),inset_0_-0.2rem_0.35rem_rgba(0,0,0,0.18)]"
           style={{ backgroundColor: card.pinColor || '#C0A468' }}

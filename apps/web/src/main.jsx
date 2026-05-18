@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from '@/App';
 import '@/index.css';
 
-const APP_VERSION = '2026-05-18-real-pins-smtp-help-v15';
+const APP_VERSION = '2026-05-18-pin-needles-colors-v16';
 
 async function refreshIfAppShellIsStale() {
 	if (!('fetch' in window)) {

@@ -1194,6 +1194,14 @@ function public_email_failure(array $result): array
         'smtp_tls_failed',
     ];
 
+    if ($code === 'smtp_auth_failed') {
+        return [
+            'status' => 503,
+            'error' => 'Der E-Mail-Versand ist aktuell nicht korrekt konfiguriert. Die SMTP-Zugangsdaten werden vom Mailserver abgelehnt.',
+            'errorCode' => $code,
+        ];
+    }
+
     if (in_array($code, $configurationCodes, true)) {
         return [
             'status' => 503,
