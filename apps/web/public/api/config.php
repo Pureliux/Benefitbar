@@ -9,14 +9,18 @@ function benefitbar_local_config_paths(): array
         $paths[] = $envPath;
     }
 
+    $paths[] = __DIR__ . '/benefitbar.config.php';
     $paths[] = __DIR__ . '/config.local.php';
+    $paths[] = dirname(__DIR__) . '/benefitbar.config.php';
     $paths[] = dirname(__DIR__) . '/config.local.php';
     $paths[] = dirname(__DIR__, 2) . '/benefitbar.config.php';
     $paths[] = dirname(__DIR__, 2) . '/config.local.php';
 
     $documentRoot = rtrim((string)($_SERVER['DOCUMENT_ROOT'] ?? ''), "/\\");
     if ($documentRoot !== '') {
+        $paths[] = $documentRoot . '/api/benefitbar.config.php';
         $paths[] = $documentRoot . '/api/config.local.php';
+        $paths[] = $documentRoot . '/benefitbar.config.php';
         $paths[] = $documentRoot . '/config.local.php';
         $paths[] = dirname($documentRoot) . '/benefitbar.config.php';
         $paths[] = dirname($documentRoot) . '/config.local.php';
@@ -136,6 +140,8 @@ function benefitbar_config_diagnostics(): array
     return [
         'expectedLocalConfigFiles' => [
             '../benefitbar.config.php',
+            'public_html/benefitbar.config.php',
+            'public_html/api/benefitbar.config.php',
             'public_html/api/config.local.php',
         ],
         'loadedConfigFile' => $loadedConfigFile,
