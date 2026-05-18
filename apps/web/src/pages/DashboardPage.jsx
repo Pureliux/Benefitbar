@@ -27,7 +27,7 @@ function greetingForNow() {
 function statusLabel(status) {
   const labels = {
     draft: 'Entwurf',
-    submitted: 'In Pruefung',
+    submitted: 'In Prüfung',
     needs_info: 'Unterlagen fehlen',
     approved: 'Genehmigt',
     rejected: 'Abgelehnt',
@@ -81,9 +81,9 @@ const DashboardPage = () => {
     })).filter((item) => item.value > 0);
 
     if (remainingBudget > 0) {
-      segments.push({ name: 'Noch verfuegbar', value: remainingBudget, color: '#E8E2D6' });
+      segments.push({ name: 'Noch verfügbar', value: remainingBudget, color: '#E8E2D6' });
     }
-    return segments.length ? segments : [{ name: 'Noch verfuegbar', value: totalBudget, color: '#E8E2D6' }];
+    return segments.length ? segments : [{ name: 'Noch verfügbar', value: totalBudget, color: '#E8E2D6' }];
   }, [remainingBudget, selectedBenefits, totalBudget]);
 
   if (loading) {
@@ -91,7 +91,7 @@ const DashboardPage = () => {
       <>
         <Header />
         <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-background">
-          <div className="text-foreground">Laedt...</div>
+          <div className="text-foreground">Lädt...</div>
         </main>
       </>
     );
@@ -116,7 +116,7 @@ const DashboardPage = () => {
                 <p className="mt-3 text-sm text-white/70">Hier siehst du dein Budget, deine Auswahl und den aktuellen Status deiner Einreichung.</p>
               </div>
               <Button onClick={() => navigate('/benefits')} className="bg-[#C0A468] text-white hover:bg-[#A98D52]">
-                Benefits auswaehlen
+                Benefits auswählen
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -188,12 +188,12 @@ const DashboardPage = () => {
                 </div>
                 <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
                   <CheckCircle2 className="mb-3 h-5 w-5 text-[#719C6F]" />
-                  <p className="text-sm text-muted-foreground">Ausgewaehlt</p>
+                  <p className="text-sm text-muted-foreground">Ausgewählt</p>
                   <p className="mt-1 text-2xl font-bold">{currency.format(selectedAmount)}</p>
                 </div>
                 <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
                   <WalletCards className="mb-3 h-5 w-5 text-[#719C6F]" />
-                  <p className="text-sm text-muted-foreground">Noch verfuegbar</p>
+                  <p className="text-sm text-muted-foreground">Noch verfügbar</p>
                   <p className="mt-1 text-2xl font-bold text-[#719C6F]">{currency.format(remainingBudget)}</p>
                 </div>
                 <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
@@ -227,10 +227,10 @@ const DashboardPage = () => {
                 ) : (
                   <div className="rounded-lg border border-dashed border-border bg-muted/30 p-8 text-center">
                     <Clock className="mx-auto mb-3 h-7 w-7 text-muted-foreground" />
-                    <h3 className="text-lg font-semibold">Noch keine Benefits ausgewaehlt</h3>
+                    <h3 className="text-lg font-semibold">Noch keine Benefits ausgewählt</h3>
                     <p className="mx-auto mt-2 text-sm text-muted-foreground">Starte mit der Auswahl und sieh sofort, wie dein Budget aufgeteilt wird.</p>
                     <Button onClick={() => navigate('/benefits')} className="mt-5 bg-[#C0A468] text-white hover:bg-[#A98D52]">
-                      Benefits auswaehlen
+                      Benefits auswählen
                     </Button>
                   </div>
                 )}

@@ -78,7 +78,7 @@ const Header = () => {
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 text-primary-foreground"
-              aria-label="Navigation oeffnen"
+              aria-label="Navigation öffnen"
             >
               {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>

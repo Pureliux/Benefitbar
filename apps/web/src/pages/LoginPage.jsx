@@ -21,7 +21,7 @@ const benefitCards = [
   {
     label: 'Mobilität',
     image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=900&q=80',
-    className: 'left-[17.5%] top-[31%] rotate-2 hidden xl:block',
+    className: 'left-[17.5%] top-[34%] rotate-2 hidden xl:block',
     objectPosition: 'center',
   },
   {
@@ -38,8 +38,8 @@ const benefitCards = [
   },
   {
     label: 'Homeoffice',
-    image: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=900&q=80',
-    className: 'right-[17.5%] top-[31%] -rotate-2 hidden xl:block',
+    image: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=900&q=80',
+    className: 'right-[17.5%] top-[34%] -rotate-2 hidden xl:block',
     objectPosition: 'center',
   },
   {

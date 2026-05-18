@@ -314,17 +314,26 @@ function seed_benefit_data(PDO $pdo): void
     $countStmt = $pdo->prepare('SELECT COUNT(*) count FROM bb_benefits WHERE benefit_year_id = ?');
     $countStmt->execute([$benefitYearId]);
     if ((int)($countStmt->fetch()['count'] ?? 0) > 0) {
+        $updates = [
+            ['Wiener Öffi-Ticket', 'Zuschuss für öffentliche Verkehrsmittel und nachhaltige Mobilität.', 'Mobilität', 'Wiener Oeffi-Ticket'],
+            ['Essens-/Verpflegungszuschuss', 'Unterstützung für Mahlzeiten und gesunde Ernährung.', 'Ernährung', 'Essens-/Verpflegungszuschuss'],
+            ['Homeoffice-Ausstattung', 'Arbeitsmittel für einen guten Arbeitsplatz zuhause.', 'Arbeitsplatz', 'Homeoffice-Ausstattung'],
+        ];
+        $updateStmt = $pdo->prepare('UPDATE bb_benefits SET title = ?, description = ?, category = ?, updated_at = ? WHERE benefit_year_id = ? AND title = ?');
+        foreach ($updates as $update) {
+            $updateStmt->execute([$update[0], $update[1], $update[2], $now, $benefitYearId, $update[3]]);
+        }
         return;
     }
 
     $benefits = [
-        ['Yoga-Kurs', 'Kurse fuer Bewegung, Achtsamkeit und mentale Gesundheit.', 'Gesundheit', 200, 'one_time', 1, 10, 0],
-        ['Wiener Oeffi-Ticket', 'Zuschuss fuer oeffentliche Verkehrsmittel und nachhaltige Mobilitaet.', 'Mobilitaet', 460, 'monthly_12', 1, 20, 1],
-        ['Fitness-Zuschuss', 'Mitgliedschaft, Kurse oder Trainingsangebote fuer deine Fitness.', 'Fitness', 300, 'one_time', 1, 30, 0],
-        ['Weiterbildung', 'Seminare, Kurse oder Fachliteratur fuer deine berufliche Entwicklung.', 'Weiterbildung', 500, 'one_time', 1, 40, 0],
+        ['Yoga-Kurs', 'Kurse für Bewegung, Achtsamkeit und mentale Gesundheit.', 'Gesundheit', 200, 'one_time', 1, 10, 0],
+        ['Wiener Öffi-Ticket', 'Zuschuss für öffentliche Verkehrsmittel und nachhaltige Mobilität.', 'Mobilität', 460, 'monthly_12', 1, 20, 1],
+        ['Fitness-Zuschuss', 'Mitgliedschaft, Kurse oder Trainingsangebote für deine Fitness.', 'Fitness', 300, 'one_time', 1, 30, 0],
+        ['Weiterbildung', 'Seminare, Kurse oder Fachliteratur für deine berufliche Entwicklung.', 'Weiterbildung', 500, 'one_time', 1, 40, 0],
         ['Gesundheitscheck', 'Vorsorge, Beratung oder anerkannte Gesundheitsleistungen.', 'Gesundheit', 250, 'one_time', 1, 50, 0],
-        ['Homeoffice-Ausstattung', 'Arbeitsmittel fuer einen guten Arbeitsplatz zuhause.', 'Arbeitsplatz', 350, 'one_time', 1, 60, 0],
-        ['Essens-/Verpflegungszuschuss', 'Unterstuetzung fuer Mahlzeiten und gesunde Ernaehrung.', 'Ernaehrung', 600, 'monthly_12', 1, 70, 1],
+        ['Homeoffice-Ausstattung', 'Arbeitsmittel für einen guten Arbeitsplatz zuhause.', 'Arbeitsplatz', 350, 'one_time', 1, 60, 0],
+        ['Essens-/Verpflegungszuschuss', 'Unterstützung für Mahlzeiten und gesunde Ernährung.', 'Ernährung', 600, 'monthly_12', 1, 70, 1],
     ];
 
     $insert = $pdo->prepare("
@@ -810,7 +819,51 @@ function require_admin(): array
 
 function email_configured(): bool
 {
+    return smtp_configured() || native_mail_available();
+}
+
+function smtp_configured(): bool
+{
     return config_value('SMTP_HOST') && config_value('SMTP_PORT') && config_value('SMTP_USER') && config_value('SMTP_PASSWORD') && config_value('SMTP_FROM');
+}
+
+function native_mail_available(): bool
+{
+    $disabled = array_map('trim', explode(',', (string)ini_get('disable_functions')));
+    return function_exists('mail') && !in_array('mail', $disabled, true);
+}
+
+function default_email_from(): string
+{
+    $configured = config_value('SMTP_FROM');
+    if ($configured !== '') {
+        return $configured;
+    }
+
+    $host = parse_url(config_value('FRONTEND_URL'), PHP_URL_HOST) ?: ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    return 'Tchibo Benefit-Bar <no-reply@' . $host . '>';
+}
+
+function send_native_mail(string $recipient, string $subject, string $html): void
+{
+    if (!native_mail_available()) {
+        throw new RuntimeException('PHP mail() is not available on this hosting plan');
+    }
+
+    $from = default_email_from();
+    $headers = [
+        'From: ' . $from,
+        'Reply-To: ' . email_address($from),
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=UTF-8',
+        'X-Mailer: PHP/' . phpversion(),
+    ];
+
+    $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
+    $sent = mail($recipient, $encodedSubject, $html, implode("\r\n", $headers));
+    if (!$sent) {
+        throw new RuntimeException('PHP mail() returned false');
+    }
 }
 
 function smtp_read($socket): string
@@ -898,13 +951,17 @@ function email_address(string $value): string
 function send_email(string $recipient, string $subject, string $html, string $type, ?int $userId = null): array
 {
     if (!email_configured()) {
-        $message = 'SMTP configuration missing';
+        $message = 'No SMTP configuration and PHP mail() is not available';
         log_email($recipient, $subject, $type, 'failed', $message, $userId);
         return ['success' => false, 'code' => 'email_not_configured', 'error' => $message];
     }
 
     try {
-        send_smtp($recipient, $subject, $html);
+        if (smtp_configured()) {
+            send_smtp($recipient, $subject, $html);
+        } else {
+            send_native_mail($recipient, $subject, $html);
+        }
         log_email($recipient, $subject, $type, 'sent', null, $userId);
         return ['success' => true];
     } catch (Throwable $error) {
@@ -948,13 +1005,32 @@ function find_user_by_token(string $column, string $token): ?array
 
 function microsoft_config_status(): array
 {
+    $redirectUri = config_value('MICROSOFT_REDIRECT_URI');
+    if ($redirectUri === '') {
+        $redirectUri = rtrim(config_value('FRONTEND_URL'), '/') . '/api/index.php/auth/microsoft/callback';
+    }
+
     $variables = [
         'MICROSOFT_CLIENT_ID' => config_value('MICROSOFT_CLIENT_ID') !== '',
         'MICROSOFT_CLIENT_SECRET' => config_value('MICROSOFT_CLIENT_SECRET') !== '',
-        'MICROSOFT_TENANT_ID' => config_value('MICROSOFT_TENANT_ID') !== '',
-        'MICROSOFT_REDIRECT_URI' => config_value('MICROSOFT_REDIRECT_URI') !== '',
+        'MICROSOFT_TENANT_ID' => microsoft_tenant_id() !== '',
+        'MICROSOFT_REDIRECT_URI' => $redirectUri !== '',
     ];
-    return ['configured' => !in_array(false, $variables, true), 'variables' => $variables];
+    return [
+        'configured' => !in_array(false, $variables, true),
+        'variables' => $variables,
+        'redirectUri' => $redirectUri,
+    ];
+}
+
+function microsoft_redirect_uri(): string
+{
+    return config_value('MICROSOFT_REDIRECT_URI') ?: (rtrim(config_value('FRONTEND_URL'), '/') . '/api/index.php/auth/microsoft/callback');
+}
+
+function microsoft_tenant_id(): string
+{
+    return config_value('MICROSOFT_TENANT_ID') ?: 'organizations';
 }
 
 function http_json(string $url, array $options = []): array
@@ -1040,12 +1116,26 @@ function handle_request_access(): void
     if (!is_eduscho_email($email)) {
         json_response(['success' => false, 'error' => 'Bitte verwende deine @eduscho.at-E-Mail-Adresse.', 'errorCode' => 'invalid_domain'], 400);
     }
-    if (!email_configured()) {
-        log_email($email, 'Tchibo Benefit-Bar - Zugang aktivieren', 'activation_email', 'failed', 'SMTP configuration missing');
-        json_response(['success' => false, 'error' => 'Der E-Mail-Versand ist aktuell nicht konfiguriert. Bitte kontaktiere HR/Prozessmanagement.', 'errorCode' => 'email_not_configured'], 503);
-    }
 
     $user = find_user_by_email($email);
+    if (!$user) {
+        $namePart = explode('@', $email)[0] ?? '';
+        $nameParts = array_values(array_filter(explode('.', $namePart)));
+        $firstName = isset($nameParts[0]) ? ucfirst($nameParts[0]) : '';
+        $lastName = isset($nameParts[1]) ? ucfirst($nameParts[1]) : '';
+        $now = now_sql();
+
+        db()->prepare("
+            INSERT INTO bb_users (
+                email, first_name, last_name, status, auth_status, password_hash, password_set_at,
+                login_method, is_admin, created_at, updated_at
+            ) VALUES (?, ?, ?, 'active', 'invited', NULL, NULL, 'email_password', 0, ?, ?)
+        ")->execute([$email, $firstName, $lastName, $now, $now]);
+
+        $user = find_user_by_email($email);
+        log_auth('access_user_auto_created', $email, 'success');
+    }
+
     if (!$user || $user['status'] !== 'active' || $user['auth_status'] === 'locked') {
         log_auth('access_requested', $email, 'failed', $user ? 'account_inactive' : 'user_not_found');
         json_response(['success' => true, 'message' => $neutral]);
@@ -1076,10 +1166,6 @@ function handle_forgot_password(): void
     }
     if (!is_eduscho_email($email)) {
         json_response(['success' => false, 'error' => 'Bitte verwende deine @eduscho.at-E-Mail-Adresse.', 'errorCode' => 'invalid_domain'], 400);
-    }
-    if (!email_configured()) {
-        log_email($email, 'Tchibo Benefit-Bar - Passwort zurücksetzen', 'password_reset_email', 'failed', 'SMTP configuration missing');
-        json_response(['success' => false, 'error' => 'Der E-Mail-Versand ist aktuell nicht konfiguriert. Bitte kontaktiere HR/Prozessmanagement.', 'errorCode' => 'email_not_configured'], 503);
     }
 
     $user = find_user_by_email($email);
@@ -1321,11 +1407,11 @@ function handle_submit_submission(): void
 
     $selected = load_selected_benefits((int)$submission['id']);
     if (!$selected) {
-        json_response(['success' => false, 'error' => 'Bitte waehle mindestens einen Benefit aus.', 'errorCode' => 'no_benefits_selected'], 400);
+        json_response(['success' => false, 'error' => 'Bitte wähle mindestens einen Benefit aus.', 'errorCode' => 'no_benefits_selected'], 400);
     }
 
     if ((float)$submission['employee_own_contribution_amount'] > 0 && empty($body['confirmOwnContribution'])) {
-        json_response(['success' => false, 'error' => 'Bitte bestaetige den Eigenanteil.', 'errorCode' => 'own_contribution_not_confirmed'], 400);
+        json_response(['success' => false, 'error' => 'Bitte bestätige den Eigenanteil.', 'errorCode' => 'own_contribution_not_confirmed'], 400);
     }
 
     $attachments = load_attachments_for_user((int)$user['id']);
@@ -1368,7 +1454,7 @@ function send_submission_notifications(array $user, array $year, array $submissi
         . '<strong>Eigenanteil:</strong> ' . number_format((float)$submission['employee_own_contribution_amount'], 2, ',', '.') . ' EUR</p>';
 
     send_email(config_value('HR_NOTIFICATION_EMAIL', 'prozessmanagement@eduscho.at'), 'Benefit-Bar Einreichung', $html, 'submission_notification', (int)$user['id']);
-    send_email($user['email'], 'Tchibo Benefit-Bar - Einreichung erhalten', '<p>Deine Einreichung wurde erfolgreich uebermittelt und wird geprueft.</p>', 'user_confirmation', (int)$user['id']);
+    send_email($user['email'], 'Tchibo Benefit-Bar - Einreichung erhalten', '<p>Deine Einreichung wurde erfolgreich übermittelt und wird geprüft.</p>', 'user_confirmation', (int)$user['id']);
 }
 
 function handle_admin_create_user(): void
@@ -1520,7 +1606,7 @@ function handle_microsoft_callback(): void
     }
 
     try {
-        $tenant = config_value('MICROSOFT_TENANT_ID');
+        $tenant = microsoft_tenant_id();
         $tokenData = http_json("https://login.microsoftonline.com/{$tenant}/oauth2/v2.0/token", [
             'http' => [
                 'method' => 'POST',
@@ -1529,7 +1615,7 @@ function handle_microsoft_callback(): void
                     'client_id' => config_value('MICROSOFT_CLIENT_ID'),
                     'client_secret' => config_value('MICROSOFT_CLIENT_SECRET'),
                     'code' => $code,
-                    'redirect_uri' => config_value('MICROSOFT_REDIRECT_URI'),
+                    'redirect_uri' => microsoft_redirect_uri(),
                     'grant_type' => 'authorization_code',
                 ]),
             ],
@@ -1544,6 +1630,24 @@ function handle_microsoft_callback(): void
             throw new RuntimeException('invalid_domain');
         }
         $user = find_user_by_email($email);
+        if (!$user) {
+            $namePart = explode('@', $email)[0] ?? '';
+            $nameParts = array_values(array_filter(explode('.', $namePart)));
+            $firstName = isset($nameParts[0]) ? ucfirst($nameParts[0]) : '';
+            $lastName = isset($nameParts[1]) ? ucfirst($nameParts[1]) : '';
+            $now = now_sql();
+
+            db()->prepare("
+                INSERT INTO bb_users (
+                    email, first_name, last_name, status, auth_status, password_hash, password_set_at,
+                    login_method, is_admin, created_at, updated_at
+                ) VALUES (?, ?, ?, 'active', 'active', NULL, NULL, 'microsoft', 0, ?, ?)
+            ")->execute([$email, $firstName, $lastName, $now, $now]);
+
+            $user = find_user_by_email($email);
+            log_auth('microsoft_user_auto_created', $email, 'success');
+        }
+
         if (!$user || $user['status'] !== 'active' || $user['auth_status'] === 'locked') {
             throw new RuntimeException('user_not_active');
         }
@@ -1615,11 +1719,11 @@ try {
         $params = http_build_query([
             'client_id' => config_value('MICROSOFT_CLIENT_ID'),
             'response_type' => 'code',
-            'redirect_uri' => config_value('MICROSOFT_REDIRECT_URI'),
+            'redirect_uri' => microsoft_redirect_uri(),
             'response_mode' => 'query',
             'scope' => 'openid profile email User.Read',
         ]);
-        redirect_to('https://login.microsoftonline.com/' . config_value('MICROSOFT_TENANT_ID') . '/oauth2/v2.0/authorize?' . $params);
+        redirect_to('https://login.microsoftonline.com/' . microsoft_tenant_id() . '/oauth2/v2.0/authorize?' . $params);
     }
     if ($method === 'GET' && $path === '/auth/microsoft/callback') handle_microsoft_callback();
 
@@ -1652,7 +1756,7 @@ try {
         if (setup_debug_enabled()) {
             json_response([
                 'success' => false,
-                'error' => 'Technischer Fehler. Bitte spaeter erneut versuchen.',
+                'error' => 'Technischer Fehler. Bitte später erneut versuchen.',
                 'errorCode' => 'technical_error',
                 'debug' => [
                     'type' => get_class($error),

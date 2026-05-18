@@ -12,14 +12,14 @@ const currency = new Intl.NumberFormat('de-AT', { style: 'currency', currency: '
 
 const statusSteps = [
   { key: 'draft', label: 'Entwurf' },
-  { key: 'submitted', label: 'In Pruefung' },
+  { key: 'submitted', label: 'In Prüfung' },
   { key: 'approved', label: 'Genehmigt' },
 ];
 
 function statusInfo(status) {
   const map = {
     draft: { label: 'Entwurf', tone: 'bg-muted text-muted-foreground', text: 'Du kannst deine Auswahl noch bearbeiten.' },
-    submitted: { label: 'In Pruefung', tone: 'bg-[#C0A468]/15 text-[#8B7138]', text: 'Deine Einreichung liegt bei HR/Prozessmanagement.' },
+    submitted: { label: 'In Prüfung', tone: 'bg-[#C0A468]/15 text-[#8B7138]', text: 'Deine Einreichung liegt bei HR/Prozessmanagement.' },
     needs_info: { label: 'Unterlagen fehlen', tone: 'bg-[#EA5153]/15 text-[#EA5153]', text: 'Bitte lade die angeforderten Unterlagen nach.' },
     approved: { label: 'Genehmigt', tone: 'bg-[#719C6F]/15 text-[#719C6F]', text: 'Deine Einreichung wurde genehmigt.' },
     rejected: { label: 'Abgelehnt', tone: 'bg-[#EA5153]/15 text-[#EA5153]', text: 'Deine Einreichung wurde abgelehnt.' },
@@ -103,9 +103,9 @@ const SubmissionPage = () => {
         body: JSON.stringify({ confirmOwnContribution: confirmed }),
       });
       await updateFromResponse(res);
-      toast.success('Einreichung wurde uebermittelt.');
+      toast.success('Einreichung wurde übermittelt.');
     } catch (error) {
-      toast.error(error.message || 'Einreichung konnte nicht uebermittelt werden.');
+      toast.error(error.message || 'Einreichung konnte nicht übermittelt werden.');
     } finally {
       setSubmitting(false);
     }
@@ -128,7 +128,7 @@ const SubmissionPage = () => {
       <>
         <Header />
         <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-background">
-          <div className="text-foreground">Laedt...</div>
+          <div className="text-foreground">Lädt...</div>
         </main>
       </>
     );
@@ -149,7 +149,7 @@ const SubmissionPage = () => {
             <div>
               <p className="text-sm font-semibold uppercase text-[#C0A468]">Einreichung</p>
               <h1 className="mt-1 text-3xl font-bold sm:text-4xl">Status</h1>
-              <p className="mt-2 text-sm text-muted-foreground">Hier pruefst du deine Auswahl, laedst Nachweise hoch und reichst final ein.</p>
+              <p className="mt-2 text-sm text-muted-foreground">Hier prüfst du deine Auswahl, lädst Nachweise hoch und reichst final ein.</p>
             </div>
             <span className={`inline-flex w-fit rounded-full px-3 py-1 text-sm font-semibold ${status.tone}`}>{status.label}</span>
           </div>
@@ -168,7 +168,7 @@ const SubmissionPage = () => {
                     </div>
                     <div>
                       <p className="font-semibold">{step.label}</p>
-                      <p className="text-xs text-muted-foreground">{index === 0 ? 'Auswahl bearbeiten' : index === 1 ? 'HR prueft' : 'Abgeschlossen'}</p>
+                      <p className="text-xs text-muted-foreground">{index === 0 ? 'Auswahl bearbeiten' : index === 1 ? 'HR prüft' : 'Abgeschlossen'}</p>
                     </div>
                   </div>
                 );
@@ -198,7 +198,7 @@ const SubmissionPage = () => {
 
           <section className="mb-8 rounded-lg border border-border bg-card p-6 shadow-sm">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Ausgewaehlte Benefits</h2>
+              <h2 className="text-xl font-semibold">Ausgewählte Benefits</h2>
               <Button variant="outline" onClick={() => navigate('/benefits')} disabled={isLocked}>
                 Auswahl bearbeiten
               </Button>
@@ -219,7 +219,7 @@ const SubmissionPage = () => {
                             {item.ownContributionAmount > 0 ? ` · Eigenanteil ${currency.format(item.ownContributionAmount)}` : ''}
                           </p>
                         </div>
-                        <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">{item.status === 'pending_hr_review' ? 'In Pruefung' : 'Ausgewaehlt'}</span>
+                        <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">{item.status === 'pending_hr_review' ? 'In Prüfung' : 'Ausgewählt'}</span>
                       </div>
 
                       {needsReceipt && (
@@ -238,7 +238,7 @@ const SubmissionPage = () => {
                           {!isLocked && (
                             <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md bg-muted px-4 py-3 text-sm font-medium transition hover:bg-muted/80">
                               <Upload className="h-4 w-4" />
-                              {uploadingId === item.id ? 'Laedt hoch...' : 'Nachweis hochladen'}
+                              {uploadingId === item.id ? 'Lädt hoch...' : 'Nachweis hochladen'}
                               <input
                                 type="file"
                                 accept=".pdf,.jpg,.jpeg,.png,.docx"
@@ -261,9 +261,9 @@ const SubmissionPage = () => {
               <div className="rounded-lg border border-dashed border-border bg-muted/30 p-8 text-center">
                 <Clock3 className="mx-auto mb-3 h-7 w-7 text-muted-foreground" />
                 <h3 className="text-lg font-semibold">Keine Einreichung vorhanden</h3>
-                <p className="mx-auto mt-2 text-sm text-muted-foreground">Waehle zuerst Benefits aus, danach kannst du sie hier final einreichen.</p>
+                <p className="mx-auto mt-2 text-sm text-muted-foreground">Wähle zuerst Benefits aus, danach kannst du sie hier final einreichen.</p>
                 <Button onClick={() => navigate('/benefits')} className="mt-5 bg-[#C0A468] text-white hover:bg-[#A98D52]">
-                  Benefits auswaehlen
+                  Benefits auswählen
                 </Button>
               </div>
             )}
@@ -275,7 +275,7 @@ const SubmissionPage = () => {
                 <div className="mb-6 flex items-start gap-3 rounded-lg bg-[#EA5153]/10 p-4">
                   <Checkbox id="confirm-own" checked={confirmed} onCheckedChange={setConfirmed} className="mt-1" />
                   <label htmlFor="confirm-own" className="cursor-pointer text-sm leading-relaxed">
-                    Ich bestaetige, dass ein Eigenanteil von <strong>{currency.format(submission.employeeOwnContributionAmount)}</strong> von mir selbst getragen wird.
+                    Ich bestätige, dass ein Eigenanteil von <strong>{currency.format(submission.employeeOwnContributionAmount)}</strong> von mir selbst getragen wird.
                   </label>
                 </div>
               )}

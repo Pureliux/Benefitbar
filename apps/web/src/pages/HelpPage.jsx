@@ -6,31 +6,31 @@ import Header from '@/components/Header.jsx';
 const faqs = [
   {
     question: 'Was ist die Benefit-Bar?',
-    answer: 'Die Benefit-Bar ist das interne Programm, mit dem du dein jaehrliches Benefit-Budget fuer passende Angebote nutzen kannst.',
+    answer: 'Die Benefit-Bar ist das interne Programm, mit dem du dein jährliches Benefit-Budget für passende Angebote nutzen kannst.',
   },
   {
     question: 'Wie hoch ist mein Budget?',
-    answer: 'Das Standardbudget betraegt 1.000 EUR pro Benefit-Jahr. Abweichungen koennen durch HR/Prozessmanagement im Admin-Bereich gepflegt werden.',
+    answer: 'Das Standardbudget beträgt 1.000 EUR pro Benefit-Jahr. Abweichungen können durch HR/Prozessmanagement im Admin-Bereich gepflegt werden.',
   },
   {
-    question: 'Was passiert, wenn ich mehr als mein Budget auswaehle?',
-    answer: 'Die App zeigt dir sofort den Unternehmensanteil und einen moeglichen Eigenanteil. Vor der finalen Einreichung musst du den Eigenanteil aktiv bestaetigen.',
+    question: 'Was passiert, wenn ich mehr als mein Budget auswähle?',
+    answer: 'Die App zeigt dir sofort den Unternehmensanteil und einen möglichen Eigenanteil. Vor der finalen Einreichung musst du den Eigenanteil aktiv bestätigen.',
   },
   {
     question: 'Wie reiche ich einen eigenen Benefit ein?',
-    answer: 'Unter "Benefits auswaehlen" findest du die Kachel "Eigenen Benefit einreichen". Eigene Benefits werden als in Pruefung markiert und durch HR bewertet.',
+    answer: 'Unter "Benefits auswählen" findest du die Kachel "Eigenen Benefit vorschlagen". Eigene Benefits werden als in Prüfung markiert und durch HR bewertet.',
   },
   {
     question: 'Welche Nachweise kann ich hochladen?',
-    answer: 'Unterstuetzt werden PDF, JPG, PNG und DOCX. Wenn fuer einen Benefit ein Nachweis notwendig ist, wird das im Status deutlich angezeigt.',
+    answer: 'Unterstützt werden PDF, JPG, PNG und DOCX. Wenn für einen Benefit ein Nachweis notwendig ist, wird das im Status deutlich angezeigt.',
   },
   {
-    question: 'Kann ich meine Auswahl noch aendern?',
+    question: 'Kann ich meine Auswahl noch ändern?',
     answer: 'Solange deine Einreichung ein Entwurf ist oder Unterlagen fehlen, kannst du sie bearbeiten. Nach der finalen Einreichung ist die Auswahl gesperrt.',
   },
   {
     question: 'Was bedeutet monatliche Auszahlung?',
-    answer: 'Einige Benefits werden ueber 12 Monate verteilt ausgewiesen. Die Budgetberechnung zeigt dir den Gesamtbetrag und den monatlichen Anteil.',
+    answer: 'Einige Benefits werden über 12 Monate verteilt ausgewiesen. Die Budgetberechnung zeigt dir den Gesamtbetrag und den monatlichen Anteil.',
   },
   {
     question: 'Wann wird meine Einreichung bearbeitet?',
@@ -45,7 +45,7 @@ const HelpPage = () => {
     <>
       <Helmet>
         <title>Hilfe & FAQ - Tchibo Benefit-Bar</title>
-        <meta name="description" content="Haeufig gestellte Fragen zur Benefit-Bar" />
+        <meta name="description" content="Häufig gestellte Fragen zur Benefit-Bar" />
       </Helmet>
 
       <Header />
@@ -59,7 +59,7 @@ const HelpPage = () => {
           </div>
 
           <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
-            <h2 className="mb-6 text-2xl font-bold">Haeufig gestellte Fragen</h2>
+            <h2 className="mb-6 text-2xl font-bold">Häufig gestellte Fragen</h2>
             <div className="space-y-2">
               {faqs.map((faq, index) => (
                 <div key={faq.question} className="overflow-hidden rounded-lg border border-border">
