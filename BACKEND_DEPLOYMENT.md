@@ -27,8 +27,8 @@ START_POCKETBASE=true
 POCKETBASE_URL=http://localhost:8090
 POCKETBASE_HEALTH_RETRIES=30
 
-FRONTEND_URL=https://salmon-jellyfish-485958.hostingersite.com
-CORS_ORIGIN=https://salmon-jellyfish-485958.hostingersite.com
+FRONTEND_URL=https://tchibo-benefitbar.at
+CORS_ORIGIN=https://tchibo-benefitbar.at
 
 JWT_SECRET=CHANGE_ME_LONG_RANDOM_VALUE
 PB_ENCRYPTION_KEY=CHANGE_ME_LONG_RANDOM_VALUE

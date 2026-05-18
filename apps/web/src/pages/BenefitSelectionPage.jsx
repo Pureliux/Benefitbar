@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
 const currency = new Intl.NumberFormat('de-AT', { style: 'currency', currency: 'EUR' });
-const chartColors = ['#C0A468', '#719C6F', '#EDD38E', '#8D7A4D', '#4F7E68', '#D7B95C'];
+const chartColors = ['#719C6F', '#C0A468', '#5B7C99', '#B66E6A', '#7A6FA3', '#4F8C85', '#D08A5B'];
 
 function payoutLabel(mode) {
   return mode === 'monthly_12' ? 'Monatlich über 12 Monate' : 'Einmalig';

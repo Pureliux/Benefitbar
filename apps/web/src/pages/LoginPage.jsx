@@ -21,7 +21,7 @@ const benefitCards = [
   {
     label: 'Mobilität',
     image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=900&q=80',
-    className: 'left-[17.5%] top-[38%] rotate-2 hidden xl:block',
+    className: 'left-[calc(17.5%_-_2.5rem)] top-[38%] rotate-2 hidden xl:block',
     objectPosition: 'center',
   },
   {
@@ -39,7 +39,7 @@ const benefitCards = [
   {
     label: 'Homeoffice',
     image: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=900&q=80',
-    className: 'right-[17.5%] top-[38%] -rotate-2 hidden xl:block',
+    className: 'right-[calc(17.5%_-_2.5rem)] top-[38%] -rotate-2 hidden xl:block',
     objectPosition: 'center',
   },
   {
@@ -163,13 +163,8 @@ const LoginPage = () => {
 
       <Header />
 
-      <main className="benefit-ambient-bg relative min-h-[calc(100vh-4rem)] overflow-hidden px-4 py-8 text-[#222222] transition-colors duration-300 dark:text-[#F7F2E8] sm:py-10">
-        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute -left-28 top-4 h-[36rem] w-[36rem] rounded-full bg-[#C0A468]/18 blur-3xl dark:bg-[#C0A468]/10" />
-          <div className="absolute right-[4%] top-[18%] h-[30rem] w-[34rem] rounded-full bg-[#EDD38E]/22 blur-3xl dark:bg-[#EDD38E]/9" />
-          <div className="absolute bottom-[-11rem] left-[22%] h-[32rem] w-[48rem] rounded-full bg-[#719C6F]/10 blur-3xl dark:bg-[#719C6F]/7" />
-          <div className="absolute left-[48%] top-[12%] h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-white/35 blur-3xl dark:bg-white/6" />
-        </div>
+      <main className="benefit-ambient-bg login-chalk-bg relative min-h-[calc(100vh-4rem)] overflow-hidden px-4 py-8 text-[#222222] transition-colors duration-300 dark:text-[#F7F2E8] sm:py-10">
+        <div className="login-chalk-layer pointer-events-none absolute inset-0 z-0" />
         <div className="pointer-events-none absolute inset-x-0 top-7 hidden justify-between px-8 lg:flex xl:hidden">
           {tabletCards.map((card) => (
             <BenefitImageCard key={`tablet-${card.label}`} card={card} compact />

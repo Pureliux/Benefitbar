@@ -6,7 +6,7 @@ return [
     'DB_USER' => 'u406044332_benefitbar',
     'DB_PASSWORD' => 'CHANGE_ME',
 
-    'FRONTEND_URL' => 'https://salmon-jellyfish-485958.hostingersite.com',
+    'FRONTEND_URL' => 'https://tchibo-benefitbar.at',
     'JWT_SECRET' => 'CHANGE_ME_LONG_RANDOM_VALUE',
     'SETUP_KEY' => 'CHANGE_ME_SETUP_KEY',
 
@@ -19,6 +19,6 @@ return [
     'SMTP_PORT' => '',
     'SMTP_USER' => '',
     'SMTP_PASSWORD' => '',
-    'SMTP_FROM' => '',
+    'SMTP_FROM' => 'Tchibo Benefitbar <no-reply@tchibo-benefitbar.at>',
     'SMTP_SECURE' => '',
 ];

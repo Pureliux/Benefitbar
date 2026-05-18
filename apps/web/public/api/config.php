@@ -94,9 +94,13 @@ function benefitbar_config(): array
         }
     }
 
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $currentHost = (string)($_SERVER['HTTP_HOST'] ?? '');
+
     if (!$config['FRONTEND_URL']) {
-        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $config['FRONTEND_URL'] = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+        $config['FRONTEND_URL'] = $scheme . '://' . ($currentHost ?: 'localhost');
+    } elseif ($currentHost !== '' && strpos((string)$config['FRONTEND_URL'], 'hostingersite.com') !== false && strpos($currentHost, 'tchibo-benefitbar.at') !== false) {
+        $config['FRONTEND_URL'] = $scheme . '://' . $currentHost;
     }
 
     return $config;

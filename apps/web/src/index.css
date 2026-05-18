@@ -134,4 +134,57 @@ html {
     background-color: hsl(var(--background));
     background-image: none;
   }
+
+  .login-chalk-bg {
+    background:
+      linear-gradient(118deg, rgba(192, 164, 104, 0.18) 0%, rgba(237, 211, 142, 0.12) 28%, transparent 56%),
+      linear-gradient(238deg, rgba(192, 164, 104, 0.16) 0%, rgba(244, 241, 234, 0.42) 38%, transparent 66%),
+      hsl(var(--background));
+  }
+
+  .dark .login-chalk-bg {
+    background:
+      linear-gradient(118deg, rgba(192, 164, 104, 0.15) 0%, rgba(237, 211, 142, 0.06) 32%, transparent 62%),
+      linear-gradient(238deg, rgba(192, 164, 104, 0.10) 0%, rgba(255, 255, 255, 0.03) 42%, transparent 70%),
+      hsl(var(--background));
+  }
+
+  .login-chalk-layer {
+    overflow: hidden;
+  }
+
+  .login-chalk-layer::before,
+  .login-chalk-layer::after {
+    content: "";
+    position: absolute;
+    inset: -12%;
+    pointer-events: none;
+  }
+
+  .login-chalk-layer::before {
+    opacity: 0.26;
+    background-image:
+      url("data:image/svg+xml,%3Csvg width='720' height='420' viewBox='0 0 720 420' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23C0A468' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' opacity='.72'%3E%3Cpath d='M42 118c65-46 154-55 210-19 49 31 21 86-44 83-82-3-106-89-23-126 85-38 189-4 243 45'/%3E%3Cpath d='M454 276c50-56 138-72 188-33 37 29 12 80-39 78-66-3-93-73-35-112'/%3E%3Cpath d='M88 323c39-30 83-40 128-25 30 10 54 31 73 59'/%3E%3Cpath d='M526 94c28-20 68-21 98-2 22 15 32 37 23 60'/%3E%3C/g%3E%3Cg stroke='%23EDD38E' stroke-width='2' stroke-linecap='round' opacity='.55'%3E%3Cpath d='M21 212c48-16 93-15 138 3'/%3E%3Cpath d='M310 344c63 24 122 22 177-5'/%3E%3Cpath d='M565 164c45 7 84 25 118 55'/%3E%3C/g%3E%3C/svg%3E");
+    background-position: 4% 7%, 72% 44%;
+    background-repeat: repeat;
+    background-size: 46rem 27rem;
+    filter: blur(0.15px);
+    mix-blend-mode: multiply;
+  }
+
+  .login-chalk-layer::after {
+    opacity: 0.42;
+    background:
+      linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.48) 48%, transparent 100%),
+      repeating-linear-gradient(96deg, transparent 0 28px, rgba(192, 164, 104, 0.045) 29px 30px);
+  }
+
+  .dark .login-chalk-layer::before {
+    opacity: 0.16;
+    mix-blend-mode: screen;
+  }
+
+  .dark .login-chalk-layer::after {
+    opacity: 0.12;
+  }
 }

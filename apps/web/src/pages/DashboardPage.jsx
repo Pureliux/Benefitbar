@@ -78,7 +78,7 @@ const DashboardPage = () => {
     const segments = selectedBenefits.map((item, index) => ({
       name: item.isCustomBenefit ? item.customTitle : item.benefit?.title,
       value: item.coveredAmount || 0,
-      color: ['#C0A468', '#719C6F', '#EDD38E', '#8D7A4D', '#4F7E68', '#D7B95C'][index % 6],
+      color: ['#719C6F', '#C0A468', '#5B7C99', '#B66E6A', '#7A6FA3', '#4F8C85', '#D08A5B'][index % 7],
     })).filter((item) => item.value > 0);
 
     if (remainingBudget > 0) {

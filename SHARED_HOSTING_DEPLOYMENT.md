@@ -42,7 +42,7 @@ return [
     'DB_USER' => 'u406044332_DEINUSER',
     'DB_PASSWORD' => 'DEIN_PASSWORT',
 
-    'FRONTEND_URL' => 'https://salmon-jellyfish-485958.hostingersite.com',
+    'FRONTEND_URL' => 'https://tchibo-benefitbar.at',
     'JWT_SECRET' => 'LANGER_ZUFALLSWERT',
     'SETUP_KEY' => 'LANGER_SETUP_ZUFALLSWERT',
 
@@ -76,7 +76,7 @@ Der Standard zeigt jetzt auf:
 Nach dem Deploy:
 
 ```text
-https://salmon-jellyfish-485958.hostingersite.com/api/index.php/health
+https://tchibo-benefitbar.at/api/index.php/health
 ```
 
 Erwartung:
@@ -88,7 +88,7 @@ Erwartung:
 Wenn stattdessen nur `technical_error` erscheint, mit dem Wert aus `SETUP_KEY` testen:
 
 ```text
-https://salmon-jellyfish-485958.hostingersite.com/api/index.php/health?debug=DEIN_SETUP_KEY
+https://tchibo-benefitbar.at/api/index.php/health?debug=DEIN_SETUP_KEY
 ```
 
 Diese Debug-URL zeigt technische Details nur, wenn der Setup-Key stimmt. Den Key und Datenbankpasswoerter nie oeffentlich teilen.

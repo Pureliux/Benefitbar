@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-attachments-v8';
+const BENEFITBAR_API_VERSION = '2026-05-18-login-email-polish-v9';
 
 header('X-Content-Type-Options: nosniff');
 
@@ -890,11 +890,23 @@ function default_email_from(): string
 {
     $configured = config_value('SMTP_FROM');
     if ($configured !== '') {
-        return $configured;
+        return normalized_email_from($configured);
     }
 
     $host = parse_url(config_value('FRONTEND_URL'), PHP_URL_HOST) ?: ($_SERVER['HTTP_HOST'] ?? 'localhost');
-    return 'Tchibo Benefit-Bar <no-reply@' . $host . '>';
+    return normalized_email_from('no-reply@' . $host);
+}
+
+function normalized_email_from(string $value): string
+{
+    $address = email_address($value);
+    $currentHost = (string)($_SERVER['HTTP_HOST'] ?? '');
+
+    if ($currentHost !== '' && strpos($address, 'hostingersite.com') !== false && strpos($currentHost, 'tchibo-benefitbar.at') !== false) {
+        $address = 'no-reply@' . preg_replace('/^www\./i', '', $currentHost);
+    }
+
+    return 'Tchibo Benefitbar <' . $address . '>';
 }
 
 function send_native_mail(string $recipient, string $subject, string $html): void
@@ -1026,9 +1038,28 @@ function send_email(string $recipient, string $subject, string $html, string $ty
 function activation_email(array $user, string $token): array
 {
     $link = rtrim(config_value('FRONTEND_URL'), '/') . '/activate?token=' . urlencode($token);
-    $name = htmlspecialchars($user['first_name'] ?: $user['email'], ENT_QUOTES, 'UTF-8');
-    $html = "<p>Hallo {$name},</p><p>für die Tchibo Benefit-Bar wurde ein Aktivierungslink angefordert.</p><p><a href=\"{$link}\">Passwort setzen</a></p><p>Der Link ist 24 Stunden gültig.</p>";
-    return send_email($user['email'], 'Tchibo Benefit-Bar - Zugang aktivieren', $html, 'activation_email', (int)$user['id']);
+    $firstName = trim((string)($user['first_name'] ?? ''));
+    if ($firstName === '') {
+        $localPart = explode('@', (string)$user['email'])[0] ?? '';
+        $firstName = explode('.', $localPart)[0] ?: (string)$user['email'];
+    }
+    $firstName = function_exists('mb_convert_case') ? mb_convert_case($firstName, MB_CASE_TITLE, 'UTF-8') : ucfirst($firstName);
+    $name = htmlspecialchars($firstName, ENT_QUOTES, 'UTF-8');
+    $linkHtml = htmlspecialchars($link, ENT_QUOTES, 'UTF-8');
+    $html = "
+        <div style=\"font-family:Arial,sans-serif;color:#222222;line-height:1.6;max-width:620px;\">
+            <p>Hallo {$name},</p>
+            <p>hier ist dein Aktivierungslink für die Tchibo Benefit Bar, über den du dein Passwort setzen kannst.</p>
+            <p style=\"margin:24px 0;\">
+                <a href=\"{$linkHtml}\" style=\"display:inline-block;background:#C0A468;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:8px;\">Passwort setzen</a>
+            </p>
+            <p style=\"word-break:break-all;\"><a href=\"{$linkHtml}\" style=\"color:#8B7138;\">{$linkHtml}</a></p>
+            <p>Dieser Link ist nur 24 Stunden gültig.</p>
+            <p>Falls du diesen Link nicht angefordert hast, kannst du diese E-Mail ignorieren.</p>
+            <p>Mit freundlichen Grüßen<br>dein Benefit Bar Team</p>
+        </div>
+    ";
+    return send_email($user['email'], 'Aktivierungslink für die Tchibo Benefit Bar', $html, 'activation_email', (int)$user['id']);
 }
 
 function reset_email(array $user, string $token): array

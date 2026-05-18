@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from '@/App';
 import '@/index.css';
 
-const APP_VERSION = '2026-05-18-login-faq-polish-v6';
+const APP_VERSION = '2026-05-18-login-email-polish-v7';
 
 async function refreshIfAppShellIsStale() {
 	if (!('fetch' in window)) {
