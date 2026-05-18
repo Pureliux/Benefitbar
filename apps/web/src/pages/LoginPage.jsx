@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -88,6 +88,7 @@ const LoginPage = () => {
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [signupEmail, setSignupEmail] = useState('');
   const [loadingAction, setLoadingAction] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -251,16 +252,26 @@ const LoginPage = () => {
                         Passwort vergessen?
                       </Link>
                     </div>
-                    <Input
-                      type="password"
-                      value={loginPassword}
-                      onChange={(e) => {
-                        setLoginPassword(e.target.value);
-                        if (errorMsg) setErrorMsg(null);
-                      }}
-                      placeholder="Passwort"
-                      className="border-[#D7C99F] bg-white text-[#222222] placeholder:text-[#8B8578] focus:border-[#C0A468] dark:border-[#514733] dark:bg-[#151412] dark:text-[#F7F2E8] dark:placeholder:text-[#8A8376]"
-                    />
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? 'text' : 'password'}
+                        value={loginPassword}
+                        onChange={(e) => {
+                          setLoginPassword(e.target.value);
+                          if (errorMsg) setErrorMsg(null);
+                        }}
+                        placeholder="Passwort"
+                        className="border-[#D7C99F] bg-white pr-11 text-[#222222] placeholder:text-[#8B8578] focus:border-[#C0A468] dark:border-[#514733] dark:bg-[#151412] dark:text-[#F7F2E8] dark:placeholder:text-[#8A8376]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((value) => !value)}
+                        className="absolute inset-y-0 right-3 flex items-center text-[#8B7138] transition-colors hover:text-[#222222] focus:outline-none focus:ring-2 focus:ring-[#C0A468] focus:ring-offset-2 focus:ring-offset-white dark:text-[#D4B978] dark:hover:text-white dark:focus:ring-offset-[#1F1D1A]"
+                        aria-label={showPassword ? 'Passwort verbergen' : 'Passwort anzeigen'}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
 
                   <Button
