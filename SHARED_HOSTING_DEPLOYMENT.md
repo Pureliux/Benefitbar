@@ -90,6 +90,14 @@ Erwartung:
 {"status":"ok","runtime":"php","database":true}
 ```
 
+Wenn stattdessen nur `technical_error` erscheint, mit dem Wert aus `SETUP_KEY` testen:
+
+```text
+https://salmon-jellyfish-485958.hostingersite.com/api/index.php/health?debug=DEIN_SETUP_KEY
+```
+
+Diese Debug-URL zeigt technische Details nur, wenn der Setup-Key stimmt. Den Key und Datenbankpasswoerter nie oeffentlich teilen.
+
 Wenn das funktioniert, laufen Login, Zugang anfordern, Passwort vergessen und Admin-User-Anlage ueber PHP/MySQL.
 
 ## 5. Microsoft Redirect URI

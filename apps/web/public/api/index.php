@@ -27,6 +27,23 @@ function json_response(array $payload, int $status = 200): void
     exit;
 }
 
+function setup_debug_enabled(): bool
+{
+    $configuredKey = config_value('SETUP_KEY');
+    $submittedKey = (string)($_GET['debug'] ?? '');
+
+    return $configuredKey !== '' && $submittedKey !== '' && hash_equals($configuredKey, $submittedKey);
+}
+
+function string_ends_with(string $value, string $suffix): bool
+{
+    if ($suffix === '') {
+        return true;
+    }
+
+    return substr($value, -strlen($suffix)) === $suffix;
+}
+
 function redirect_to(string $url): void
 {
     header('Location: ' . $url, true, 302);
@@ -171,7 +188,7 @@ function normalize_email(?string $email): string
 
 function is_eduscho_email(string $email): bool
 {
-    return str_ends_with(normalize_email($email), '@eduscho.at');
+    return string_ends_with(normalize_email($email), '@eduscho.at');
 }
 
 function validate_password_policy(string $password): ?string
@@ -978,6 +995,24 @@ try {
     json_response(['success' => false, 'error' => 'Route not found', 'path' => $path], 404);
 } catch (Throwable $error) {
     error_log($error->getMessage());
+    try {
+        if (setup_debug_enabled()) {
+            json_response([
+                'success' => false,
+                'error' => 'Technischer Fehler. Bitte spaeter erneut versuchen.',
+                'errorCode' => 'technical_error',
+                'debug' => [
+                    'type' => get_class($error),
+                    'message' => $error->getMessage(),
+                    'file' => basename($error->getFile()),
+                    'line' => $error->getLine(),
+                ],
+            ], 500);
+        }
+    } catch (Throwable $debugError) {
+        error_log('debug payload failed: ' . $debugError->getMessage());
+    }
+
     json_response([
         'success' => false,
         'error' => 'Technischer Fehler. Bitte später erneut versuchen.',
