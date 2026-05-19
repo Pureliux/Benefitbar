@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
 const currency = new Intl.NumberFormat('de-AT', { style: 'currency', currency: 'EUR' });
+const ownContributionNotice = 'Dein Budget ist überschritten. Der Mehrbetrag wird als Eigenanteil ausgewiesen.';
 const budgetExceededMessage = 'Budget überschritten. Entferne zuerst einen Benefit, bevor du ein weiteres auswählst.';
 
 function payoutLabel(mode) {
@@ -20,7 +21,25 @@ function payoutLabel(mode) {
 }
 
 function parseEuroInput(value) {
-  return Number(String(value).replace(/\./g, '').replace(',', '.'));
+  const compactValue = String(value ?? '')
+    .trim()
+    .replace(/\s/g, '')
+    .replace(/€/g, '')
+    .replace(/euro?/gi, '')
+    .replace(/'/g, '');
+
+  if (!compactValue) return NaN;
+
+  if (compactValue.includes(',')) {
+    return Number(compactValue.replace(/\./g, '').replace(',', '.'));
+  }
+
+  const dotParts = compactValue.split('.');
+  if (dotParts.length > 2 || (dotParts.length === 2 && dotParts[0].length <= 3 && dotParts[1].length === 3)) {
+    return Number(compactValue.replace(/\./g, ''));
+  }
+
+  return Number(compactValue);
 }
 
 function formatEuroInput(value) {
@@ -132,11 +151,6 @@ const BenefitSelectionPage = () => {
     const amount = parseEuroInput(customBenefit.amount);
     if (!customBenefit.title.trim() || !amount || amount <= 0) {
       toast.error('Bitte Titel und Betrag angeben.');
-      return;
-    }
-
-    if (isBudgetExceeded()) {
-      toast.error(budgetExceededMessage);
       return;
     }
 
@@ -420,11 +434,11 @@ const BenefitSelectionPage = () => {
                   </div>
                   <Button
                     onClick={handleAddCustomBenefit}
-                    disabled={!editable || budgetExceeded || savingId === 'custom'}
+                    disabled={!editable || savingId === 'custom'}
                     className="mt-4 bg-[#23211D] text-white hover:bg-[#38342D] dark:bg-[#C0A468]"
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    {budgetExceeded ? 'Budget überschritten' : (savingId === 'custom' ? 'Wird gespeichert …' : 'Eigenen Benefit hinzufügen')}
+                    {savingId === 'custom' ? 'Wird gespeichert …' : 'Eigenen Benefit hinzufügen'}
                   </Button>
                 </article>
               )}
@@ -438,7 +452,7 @@ const BenefitSelectionPage = () => {
 
               {budgetExceeded && (
                 <div className="rounded-lg border border-[#EA5153]/30 bg-[#EA5153]/10 p-3 text-sm font-medium text-[#EA5153]">
-                  {budgetExceededMessage}
+                  {ownContributionNotice}
                 </div>
               )}
 

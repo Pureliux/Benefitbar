@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-18-budget-lock-chart-tooltip-v22';
+const BENEFITBAR_API_VERSION = '2026-05-19-custom-benefit-open-amount-v23';
 const LOGIN_EMAIL_ERROR_MESSAGE = 'Bitte verwende deine @eduscho.at-Adresse oder eine freigegebene E-Mail-Adresse.';
 
 header('X-Content-Type-Options: nosniff');
@@ -1678,7 +1678,6 @@ function handle_add_custom_benefit(): void
     $submission = get_or_create_submission((int)$user['id'], (int)$year['id']);
     ensure_editable_submission($submission);
     $submission = recalculate_submission((int)$submission['id']);
-    require_budget_available_for_new_benefit($submission, $year);
 
     $now = now_sql();
     db()->prepare("
