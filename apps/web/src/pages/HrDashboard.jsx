@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   ExternalLink,
   FileText,
+  Maximize2,
   RefreshCw,
   Search,
   XCircle,
@@ -17,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const currency = new Intl.NumberFormat('de-AT', { style: 'currency', currency: 'EUR' });
 
@@ -106,9 +108,10 @@ const HrDashboard = () => {
   const [decisionReason, setDecisionReason] = useState('');
   const [savingAction, setSavingAction] = useState(null);
   const [lastAction, setLastAction] = useState(null);
+  const [expandedNoteId, setExpandedNoteId] = useState(null);
 
-  const loadSubmissions = async () => {
-    setLoadingList(true);
+  const loadSubmissions = async ({ silent = false } = {}) => {
+    if (!silent) setLoadingList(true);
     try {
       const params = new URLSearchParams({ queue });
       if (year !== 'all') params.set('year', year);
@@ -123,24 +126,24 @@ const HrDashboard = () => {
 
       setSubmissions(data.submissions || []);
       setYears(data.years || []);
-      const nextSelected = selectedId && (data.submissions || []).some((item) => item.id === selectedId)
+      const nextSelected = selectedId && (silent || (data.submissions || []).some((item) => item.id === selectedId))
         ? selectedId
         : data.submissions?.[0]?.id || null;
       setSelectedId(nextSelected);
     } catch (error) {
       toast.error(error.message || 'HR-Daten konnten nicht geladen werden.');
     } finally {
-      setLoadingList(false);
+      if (!silent) setLoadingList(false);
     }
   };
 
-  const loadDetail = async (id = selectedId) => {
+  const loadDetail = async (id = selectedId, { silent = false } = {}) => {
     if (!id) {
       setDetail(null);
       return;
     }
 
-    setLoadingDetail(true);
+    if (!silent) setLoadingDetail(true);
     try {
       const res = await apiServerClient.fetch(`/hr/submissions/detail?id=${encodeURIComponent(id)}`);
       const data = await res.json();
@@ -156,7 +159,7 @@ const HrDashboard = () => {
     } catch (error) {
       toast.error(error.message || 'Einreichung konnte nicht geladen werden.');
     } finally {
-      setLoadingDetail(false);
+      if (!silent) setLoadingDetail(false);
     }
   };
 
@@ -184,6 +187,7 @@ const HrDashboard = () => {
     ? detail.selectedBenefits.every((item) => item.hrReviewStatus === 'checked')
     : false;
   const employeeFeedback = employeeFeedbackInfo(detail);
+  const expandedNoteItem = detail?.selectedBenefits?.find((item) => item.id === expandedNoteId);
 
   const attachmentUrl = (attachment) => {
     const params = new URLSearchParams({ id: attachment.id });
@@ -192,9 +196,15 @@ const HrDashboard = () => {
     return `${API_SERVER_URL}/attachments/file?${params.toString()}`;
   };
 
-  const refreshCurrent = async () => {
-    await loadSubmissions();
-    await loadDetail(selectedId);
+  const refreshCurrent = async ({ preserveScroll = false, silent = false } = {}) => {
+    const scrollPosition = preserveScroll ? { x: window.scrollX, y: window.scrollY } : null;
+    await Promise.all([
+      loadSubmissions({ silent }),
+      loadDetail(selectedId, { silent }),
+    ]);
+    if (scrollPosition) {
+      window.requestAnimationFrame(() => window.scrollTo(scrollPosition.x, scrollPosition.y));
+    }
   };
 
   const reviewBenefit = async (selectedBenefitId, nextStatus) => {
@@ -226,7 +236,7 @@ const HrDashboard = () => {
             : 'border-emerald-200 bg-emerald-50 text-emerald-800',
       });
       toast.success('Prüfstatus gespeichert.', { description: actionText });
-      await refreshCurrent();
+      await refreshCurrent({ preserveScroll: true, silent: true });
     } catch (error) {
       toast.error(error.message || 'Prüfstatus konnte nicht gespeichert werden.');
     } finally {
@@ -275,7 +285,7 @@ const HrDashboard = () => {
       const action = actionByDecision[decision];
       setLastAction(action);
       toast.success(action?.title || data.message || 'Entscheidung gespeichert.', { description: action?.text });
-      await refreshCurrent();
+      await refreshCurrent({ preserveScroll: true, silent: true });
     } catch (error) {
       toast.error(error.message || 'Entscheidung konnte nicht gespeichert werden.');
     } finally {
@@ -299,7 +309,7 @@ const HrDashboard = () => {
               <h1 className="mt-1 text-3xl font-bold sm:text-4xl">Einreichungen prüfen</h1>
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Queue, Nachweise, Checklist und Entscheidungen für Benefitbar.</p>
             </div>
-            <Button onClick={refreshCurrent} variant="outline" className="border-blue-200 bg-white text-blue-800 hover:bg-blue-50 dark:bg-slate-900 dark:text-blue-200">
+            <Button onClick={() => refreshCurrent()} variant="outline" className="border-blue-200 bg-white text-blue-800 hover:bg-blue-50 dark:bg-slate-900 dark:text-blue-200">
               <RefreshCw className="mr-2 h-4 w-4" />
               Aktualisieren
             </Button>
@@ -499,7 +509,19 @@ const HrDashboard = () => {
                             )}
                           </div>
                           <div>
-                            <p className="mb-2 text-xs font-bold uppercase text-slate-500">HR-Notiz</p>
+                            <div className="mb-2 flex items-center justify-between gap-2">
+                              <p className="text-xs font-bold uppercase text-slate-500">HR-Notiz</p>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setExpandedNoteId(item.id)}
+                                className="h-7 px-2 text-xs text-blue-800 hover:bg-blue-50 hover:text-blue-900 dark:text-blue-200 dark:hover:bg-blue-950/30"
+                              >
+                                <Maximize2 className="mr-1 h-3.5 w-3.5" />
+                                Groß
+                              </Button>
+                            </div>
                             <Textarea
                               value={reviewNotes[item.id] || ''}
                               onChange={(event) => setReviewNotes((current) => ({ ...current, [item.id]: event.target.value }))}
@@ -544,6 +566,33 @@ const HrDashboard = () => {
           </div>
         </div>
       </main>
+
+      <Dialog open={Boolean(expandedNoteId)} onOpenChange={(open) => {
+        if (!open) setExpandedNoteId(null);
+      }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>HR-Notiz bearbeiten</DialogTitle>
+            <DialogDescription>
+              {itemName(expandedNoteItem) || 'Benefit'} · Die Notiz wird beim nächsten Prüfstatus mitgespeichert.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={expandedNoteId ? (reviewNotes[expandedNoteId] || '') : ''}
+            onChange={(event) => {
+              const value = event.target.value;
+              setReviewNotes((current) => ({ ...current, [expandedNoteId]: value }));
+            }}
+            placeholder="Interne Notiz, Rückfrage oder Ablehnungsgrund ausführlich formulieren"
+            className="min-h-[22rem] bg-background text-base leading-relaxed"
+          />
+          <DialogFooter>
+            <Button type="button" onClick={() => setExpandedNoteId(null)} className="bg-blue-700 text-white hover:bg-blue-800">
+              Übernehmen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

@@ -51,13 +51,15 @@ const stepVisuals = {
   },
 };
 
-function statusInfo(status, reason = '') {
+function statusInfo(status, reason = '', selectedCount = 0) {
   const map = {
     draft: {
-      label: 'In Bearbeitung',
+      label: selectedCount > 0 ? 'Automatisch gespeichert' : 'Noch nicht gestartet',
       tone: 'bg-[#EDC948]/20 text-[#8B7138]',
-      headline: 'Deine Auswahl ist noch offen.',
-      text: 'Wähle deine Benefits aus, ergänze Nachweise und reiche alles final ein.',
+      headline: selectedCount > 0 ? 'Deine Auswahl ist automatisch gespeichert.' : 'Noch keine Benefits ausgewählt.',
+      text: selectedCount > 0
+        ? 'Du musst keinen Entwurf speichern. Deine Auswahl liegt bereits sicher vor; ergänze bei Bedarf Nachweise und reiche final ein.'
+        : 'Starte mit der Auswahl deiner Benefits. Sobald du etwas auswählst, wird es automatisch gespeichert.',
     },
     submitted: {
       label: 'Bei HR',
@@ -121,8 +123,8 @@ function StepIcon({ state, index }) {
 
 function progressWidth(status) {
   const map = {
-    draft: '18%',
-    auto_assigned: '18%',
+    draft: '0%',
+    auto_assigned: '0%',
     submitted: '55%',
     needs_info: '55%',
     rejected: '55%',
@@ -212,16 +214,6 @@ const SubmissionPage = () => {
     return `${API_SERVER_URL}/attachments/file?${params.toString()}`;
   };
 
-  const handleSaveDraft = async () => {
-    try {
-      const res = await apiServerClient.fetch('/submission/save-draft', { method: 'POST' });
-      await updateFromResponse(res);
-      toast.success('Entwurf wurde gespeichert.');
-    } catch (error) {
-      toast.error(error.message || 'Entwurf konnte nicht gespeichert werden.');
-    }
-  };
-
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
@@ -244,7 +236,7 @@ const SubmissionPage = () => {
   const selectedBenefits = overview?.selectedBenefits || [];
   const attachments = overview?.attachments || [];
   const rejectionReason = submission?.adminComment || submission?.needsInfoReason;
-  const status = statusInfo(submission?.status, rejectionReason);
+  const status = statusInfo(submission?.status, rejectionReason, selectedBenefits.length);
   const statusEditable = submission && ['draft', 'needs_info', 'rejected'].includes(submission.status);
   const canEdit = Boolean(statusEditable && (windowInfo.canEdit ?? true));
   const canSubmit = Boolean(canEdit && (windowInfo.canSubmit ?? true));
@@ -287,7 +279,7 @@ const SubmissionPage = () => {
             <div>
               <p className="text-sm font-semibold uppercase text-[#C0A468]">Einreichung</p>
               <h1 className="mt-1 text-3xl font-bold sm:text-4xl">Status</h1>
-              <p className="mt-2 text-sm text-muted-foreground">Hier prüfst du deine Auswahl, lädst Nachweise hoch und reichst final ein.</p>
+              <p className="mt-2 text-sm text-muted-foreground">Deine Auswahl wird automatisch gespeichert. Hier ergänzt du Nachweise und reichst final ein.</p>
             </div>
             <span className={`inline-flex w-fit rounded-full px-3 py-1 text-sm font-semibold ${status.tone}`}>{status.label}</span>
           </div>
@@ -490,8 +482,8 @@ const SubmissionPage = () => {
                 </div>
               )}
 
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button variant="outline" onClick={handleSaveDraft}>Als Entwurf speichern</Button>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm font-medium text-muted-foreground">Änderungen an deiner Auswahl werden automatisch gespeichert.</p>
                 <Button
                   onClick={handleSubmit}
                   disabled={!canSubmit || submitting || ((submission?.employeeOwnContributionAmount || 0) > 0 && !confirmed)}
