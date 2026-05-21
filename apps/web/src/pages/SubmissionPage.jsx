@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, CheckCircle2, Clock3, ExternalLink, FileCheck2, FileText, Send, Trash2, Upload } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock3, ExternalLink, FileCheck2, FileText, RotateCcw, Send, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import apiServerClient, { API_SERVER_URL } from '@/lib/apiServerClient';
 import Header from '@/components/Header.jsx';
@@ -65,7 +65,7 @@ function statusInfo(status, reason = '', selectedCount = 0) {
       label: 'Bei HR',
       tone: 'bg-[#C0A468]/15 text-[#8B7138]',
       headline: 'HR prüft deine Einreichung.',
-      text: 'Du musst im Moment nichts tun. Sobald es eine Rückfrage oder Freigabe gibt, siehst du sie hier.',
+      text: 'Du musst im Moment nichts tun. Falls dir vor Fristablauf ein Fehler auffällt, kannst du die Einreichung zurückziehen und erneut einreichen.',
     },
     needs_info: {
       label: 'Nachbesserung',
@@ -141,6 +141,7 @@ const SubmissionPage = () => {
   const [uploadingId, setUploadingId] = useState(null);
   const [deletingAttachmentId, setDeletingAttachmentId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   const loadOverview = async () => {
     setLoading(true);
@@ -231,6 +232,26 @@ const SubmissionPage = () => {
     }
   };
 
+  const handleWithdraw = async () => {
+    const confirmedWithdraw = window.confirm(
+      'Einreichung zurückziehen? Deine Auswahl und Nachweise bleiben erhalten, aber HR prüft sie erst wieder nach deiner erneuten finalen Einreichung.',
+    );
+    if (!confirmedWithdraw) return;
+
+    setWithdrawing(true);
+    try {
+      const res = await apiServerClient.fetch('/submission/withdraw', {
+        method: 'POST',
+      });
+      await updateFromResponse(res);
+      toast.success('Einreichung wurde zurückgezogen. Du kannst sie jetzt bearbeiten und erneut einreichen.');
+    } catch (error) {
+      toast.error(error.message || 'Einreichung konnte nicht zurückgezogen werden.');
+    } finally {
+      setWithdrawing(false);
+    }
+  };
+
   const submission = overview?.submission;
   const windowInfo = overview?.window || {};
   const selectedBenefits = overview?.selectedBenefits || [];
@@ -240,6 +261,7 @@ const SubmissionPage = () => {
   const statusEditable = submission && ['draft', 'needs_info', 'rejected'].includes(submission.status);
   const canEdit = Boolean(statusEditable && (windowInfo.canEdit ?? true));
   const canSubmit = Boolean(canEdit && (windowInfo.canSubmit ?? true));
+  const canWithdraw = Boolean(submission?.status === 'submitted' && windowInfo.isSelectionOpen);
   const isLocked = !canEdit;
 
   const attachmentsBySelectedId = useMemo(() => {
@@ -346,6 +368,29 @@ const SubmissionPage = () => {
                 Abgelehnt: {rejectionReason || 'Keine Begründung hinterlegt.'} Bitte bearbeiten und erneut einreichen.
               </p>
             </div>
+          )}
+
+          {canWithdraw && (
+            <section className="mb-8 rounded-lg border border-[#C0A468]/30 bg-[#C0A468]/10 p-5 shadow-sm">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="max-w-3xl">
+                  <h2 className="text-lg font-semibold text-[#8B7138] dark:text-[#EDD38E]">Falsch eingereicht?</h2>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                    Du kannst deine Einreichung bis zum Ende der Auswahlfrist zurückziehen. Danach wird sie wieder als Entwurf gespeichert und du kannst Auswahl oder Nachweise korrigieren.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleWithdraw}
+                  disabled={withdrawing}
+                  className="border-[#C0A468] text-[#8B7138] hover:bg-[#C0A468]/15 dark:text-[#EDD38E]"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  {withdrawing ? 'Wird zurückgezogen …' : 'Einreichung zurückziehen'}
+                </Button>
+              </div>
+            </section>
           )}
 
           <section className="mb-8 grid gap-4 md:grid-cols-4">

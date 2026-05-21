@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v26';
+const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v27';
 const LOGIN_EMAIL_ERROR_MESSAGE = 'Bitte verwende deine @eduscho.at-Adresse oder eine freigegebene E-Mail-Adresse.';
 const FIRST_BENEFIT_YEAR = 2027;
 const FIRST_SELECTION_OPEN_DATE = '2026-05-21';
@@ -2326,6 +2326,68 @@ function handle_submit_submission(): void
     json_response(benefit_payload_for_user($user));
 }
 
+function handle_withdraw_submission(): void
+{
+    $user = require_user();
+    $year = current_benefit_year();
+    $submission = recalculate_submission((int)get_or_create_submission((int)$user['id'], (int)$year['id'])['id']);
+
+    if ($submission['status'] !== 'submitted') {
+        json_response([
+            'success' => false,
+            'error' => 'Nur eingereichte Einreichungen können zurückgezogen werden.',
+            'errorCode' => 'submission_not_withdrawable',
+        ], 409);
+    }
+
+    $window = benefit_year_window_info($year, $submission);
+    if (empty($window['isSelectionOpen'])) {
+        json_response([
+            'success' => false,
+            'error' => 'Die Einreichung kann nach Ablauf der Auswahlfrist nicht mehr selbst zurückgezogen werden. Bitte kontaktiere HR/Prozessmanagement.',
+            'errorCode' => 'withdraw_window_closed',
+            'window' => $window,
+        ], 409);
+    }
+
+    $pdo = db();
+    $now = now_sql();
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare("
+            UPDATE bb_submissions
+            SET status = 'draft',
+                submitted_at = NULL,
+                admin_comment = NULL,
+                needs_info_reason = NULL,
+                hr_decided_by = NULL,
+                hr_decided_at = NULL,
+                updated_at = ?
+            WHERE id = ?
+        ")->execute([$now, $submission['id']]);
+
+        $pdo->prepare("
+            UPDATE bb_selected_benefits
+            SET hr_review_status = 'open',
+                hr_review_note = NULL,
+                hr_reviewed_by = NULL,
+                hr_reviewed_at = NULL,
+                updated_at = ?
+            WHERE submission_id = ?
+        ")->execute([$now, $submission['id']]);
+
+        $pdo->commit();
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $error;
+    }
+
+    log_auth('submission_withdrawn', $user['email'], 'success');
+    json_response(benefit_payload_for_user($user));
+}
+
 function email_attachments_for_submission(int $userId, array $selected): array
 {
     $selectedIds = array_values(array_filter(array_map(function ($item) {
@@ -2979,6 +3041,7 @@ try {
     if ($method === 'POST' && $path === '/attachments/delete') handle_delete_attachment();
     if ($method === 'POST' && $path === '/submission/save-draft') handle_save_submission_draft();
     if ($method === 'POST' && $path === '/submission/submit') handle_submit_submission();
+    if ($method === 'POST' && $path === '/submission/withdraw') handle_withdraw_submission();
     if ($method === 'GET' && $path === '/hr/submissions') handle_hr_submissions();
     if ($method === 'GET' && $path === '/hr/submissions/detail') handle_hr_submission_detail();
     if ($method === 'POST' && $path === '/hr/selected-benefit/review') handle_hr_selected_benefit_review();
