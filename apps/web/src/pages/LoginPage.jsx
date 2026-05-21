@@ -170,7 +170,7 @@ const LoginPage = () => {
         <div className="relative z-10 mx-auto flex min-h-[calc(100vh-8rem)] max-w-md items-center justify-center lg:min-h-[calc(100vh-9rem)]">
           <section className="w-full rounded-lg border border-[#E7DDBF] bg-white/95 p-6 shadow-2xl shadow-black/10 backdrop-blur-sm transition-colors duration-300 dark:border-[#3A3E46] dark:bg-[#202329]/95 dark:shadow-black/40 sm:p-8">
             <div className="mb-8 text-center">
-              <h1 className="font-['Inter',sans-serif] text-2xl font-bold leading-tight text-[#C0A468]">
+              <h1 className="font-['Inter',sans-serif] text-5xl font-extrabold leading-none text-[#C0A468] sm:text-6xl">
                 Benefitbar
               </h1>
             </div>
