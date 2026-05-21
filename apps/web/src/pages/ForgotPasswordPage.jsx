@@ -85,7 +85,7 @@ const ForgotPasswordPage = () => {
                       setEmail(e.target.value);
                       if (errorMsg) setErrorMsg(null);
                     }}
-                    placeholder="name@eduscho.at"
+                    placeholder="vorname.nachname@eduscho.at"
                     className="bg-background text-foreground border-border focus:border-primary transition-all"
                   />
                 </div>
