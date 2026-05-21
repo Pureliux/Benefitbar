@@ -171,7 +171,15 @@ const LoginPage = () => {
         <div className="relative z-10 mx-auto flex min-h-[calc(100vh-8rem)] max-w-md items-center justify-center lg:min-h-[calc(100vh-9rem)]">
           <section className="w-full rounded-lg border border-[#E7DDBF] bg-white/95 p-6 shadow-2xl shadow-black/10 backdrop-blur-sm transition-colors duration-300 dark:border-[#3A3E46] dark:bg-[#202329]/95 dark:shadow-black/40 sm:p-8">
             <div className="mb-8 text-center">
-              <h1 className="inline-flex border-y-2 border-[#C0A468] px-1.5 py-1 text-4xl font-black leading-none tracking-normal text-[#C0A468] dark:border-[#D4B978] dark:text-[#D4B978] sm:text-5xl">
+              <h1
+                className="inline-block px-1 text-4xl font-extrabold leading-none tracking-normal text-[#C0A468] dark:text-[#D4B978] sm:text-5xl"
+                style={{
+                  fontFamily: "'Segoe UI Variable Display', 'Aptos Display', Inter, ui-sans-serif, system-ui, sans-serif",
+                  fontStretch: '108%',
+                  transform: 'scaleX(1.05)',
+                  transformOrigin: 'center',
+                }}
+              >
                 Benefitbar
               </h1>
             </div>
