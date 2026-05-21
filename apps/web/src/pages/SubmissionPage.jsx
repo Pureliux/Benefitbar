@@ -371,20 +371,24 @@ const SubmissionPage = () => {
           )}
 
           {canWithdraw && (
-            <section className="mb-8 rounded-lg border border-[#C0A468]/30 bg-[#C0A468]/10 p-5 shadow-sm">
+            <section className="mb-8 rounded-lg border-2 border-[#EA5153]/45 bg-[#EA5153]/10 p-5 shadow-md">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="max-w-3xl">
-                  <h2 className="text-lg font-semibold text-[#8B7138] dark:text-[#EDD38E]">Falsch eingereicht?</h2>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    Du kannst deine Einreichung bis zum Ende der Auswahlfrist zurückziehen. Danach wird sie wieder als Entwurf gespeichert und du kannst Auswahl oder Nachweise korrigieren.
-                  </p>
+                <div className="flex max-w-3xl gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#EA5153] text-white">
+                    <RotateCcw className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-[#EA5153]">Einreichung zurückziehen und korrigieren</h2>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                      Falls dir ein Fehler aufgefallen ist, kannst du die Einreichung hier zurückziehen. Sie wird wieder als Entwurf gespeichert; Auswahl und Nachweise bleiben erhalten.
+                    </p>
+                  </div>
                 </div>
                 <Button
                   type="button"
-                  variant="outline"
                   onClick={handleWithdraw}
                   disabled={withdrawing}
-                  className="border-[#C0A468] text-[#8B7138] hover:bg-[#C0A468]/15 dark:text-[#EDD38E]"
+                  className="bg-[#EA5153] text-white shadow-sm hover:bg-[#D43D40]"
                 >
                   <RotateCcw className="mr-2 h-4 w-4" />
                   {withdrawing ? 'Wird zurückgezogen …' : 'Einreichung zurückziehen'}

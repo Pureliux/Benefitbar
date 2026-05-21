@@ -29,7 +29,7 @@ const Header = () => {
   const isSignedIn = Boolean(employee || currentUser);
 
   return (
-    <header className="relative z-50 bg-primary text-primary-foreground shadow-sm transition-colors duration-200">
+    <header className="sticky top-0 z-50 bg-primary text-primary-foreground shadow-sm transition-colors duration-200">
       <div className="w-full px-3 sm:px-5 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <Link to={isSignedIn ? '/dashboard' : '/login'} className="flex items-center gap-2 transition-opacity hover:opacity-90">

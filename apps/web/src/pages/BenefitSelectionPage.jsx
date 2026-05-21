@@ -1,20 +1,81 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
-import { Check, PencilLine, Plus, ReceiptText, Sparkles, Trash2, X } from 'lucide-react';
+import { Check, ExternalLink, FileText, Info, PencilLine, Plus, ReceiptText, Sparkles, Trash2, Upload, X } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import apiServerClient from '@/lib/apiServerClient';
+import apiServerClient, { API_SERVER_URL } from '@/lib/apiServerClient';
 import { ActivePieCallout, ChartSegmentCallout, buildBenefitChartData } from '@/lib/benefitChart.jsx';
 import Header from '@/components/Header.jsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 const currency = new Intl.NumberFormat('de-AT', { style: 'currency', currency: 'EUR' });
 const ownContributionNotice = 'Dein Budget ist überschritten. Der Mehrbetrag wird als Eigenanteil ausgewiesen.';
 const budgetExceededMessage = 'Budget überschritten. Entferne zuerst einen Benefit, bevor du ein weiteres auswählst.';
+const benefitDetailImage = '/brand/benefit-detail-strip.png';
+
+const benefitDetails = {
+  'Yoga-Kurs': {
+    imagePosition: '0% center',
+    summary: 'Für regelmäßige Bewegung, mentale Entlastung und einen bewussten Ausgleich zum Arbeitsalltag.',
+    highlights: ['Yoga-, Pilates- oder Achtsamkeitskurse', 'Präsenz- und Onlineangebote', 'Einzelkurse oder Kursblöcke'],
+    receipt: 'Rechnung, Zahlungsbestätigung oder Teilnahmebestätigung des Anbieters.',
+    hrNote: 'Achte darauf, dass Anbieter, Zeitraum und Betrag auf dem Nachweis gut lesbar sind.',
+  },
+  'Wiener Öffi-Ticket': {
+    imagePosition: '16.666% center',
+    summary: 'Unterstützt nachhaltige Mobilität für deinen Arbeitsweg und private Fahrten im öffentlichen Verkehr.',
+    highlights: ['Jahreskarte oder Zeitkarten', 'Öffi-Abos und digitale Tickets', 'Monatliche Auszahlung über das Benefit-Jahr'],
+    receipt: 'Ticketbeleg, Rechnung oder Screenshot aus der Ticket-App mit Name, Zeitraum und Betrag.',
+    hrNote: 'Bei Abos ist ein Nachweis mit Laufzeit besonders hilfreich.',
+  },
+  'Fitness-Zuschuss': {
+    imagePosition: '33.333% center',
+    summary: 'Für Fitnessstudio, Kurse und Trainingsangebote, die deine Gesundheit langfristig unterstützen.',
+    highlights: ['Fitnessstudio-Mitgliedschaft', 'Sportkurse und Personal Training', 'Ausrüstung, wenn sie direkt zum Angebot gehört'],
+    receipt: 'Rechnung oder Mitgliedschaftsbestätigung mit bezahltem Betrag und Leistungszeitraum.',
+    hrNote: 'Der Nachweis sollte klar zeigen, dass es sich um ein Gesundheits- oder Fitnessangebot handelt.',
+  },
+  Weiterbildung: {
+    imagePosition: '50% center',
+    summary: 'Für berufliche Entwicklung, fachliche Vertiefung und Lernangebote, die dich im Job weiterbringen.',
+    highlights: ['Seminare, Kurse und Zertifikate', 'Fachliteratur und Lernplattformen', 'Sprach- oder Softwaretrainings'],
+    receipt: 'Rechnung, Kursbestätigung oder Buchungsbeleg mit Anbieter, Thema und Betrag.',
+    hrNote: 'Eine kurze Beschreibung hilft HR, den beruflichen Bezug schneller zu prüfen.',
+  },
+  Gesundheitscheck: {
+    imagePosition: '66.666% center',
+    summary: 'Für Vorsorge, Beratung und anerkannte Gesundheitsleistungen, die präventiv wirken.',
+    highlights: ['Vorsorgeuntersuchungen', 'Beratung und Diagnostik', 'Anerkannte Gesundheitsleistungen'],
+    receipt: 'Honorarnote, Rechnung oder Bestätigung der Einrichtung mit Leistungsdatum und Betrag.',
+    hrNote: 'Medizinische Details müssen nicht ausführlich offengelegt werden; relevant sind Leistung, Datum und Betrag.',
+  },
+  'Homeoffice-Ausstattung': {
+    imagePosition: '83.333% center',
+    summary: 'Für eine ergonomische, ruhige und produktive Arbeitsumgebung zuhause.',
+    highlights: ['Ergonomischer Stuhl oder Tisch', 'Monitor, Tastatur, Maus oder Beleuchtung', 'Arbeitsmittel für den Homeoffice-Platz'],
+    receipt: 'Kaufbeleg oder Rechnung mit Artikelbezeichnung und Betrag.',
+    hrNote: 'Bitte lade den vollständigen Beleg hoch, damit Artikel und Preis nachvollziehbar sind.',
+  },
+  'Essens-/Verpflegungszuschuss': {
+    imagePosition: '100% center',
+    summary: 'Unterstützt regelmäßige Mahlzeiten und gesunde Ernährung im Arbeitsalltag.',
+    highlights: ['Essenszuschüsse und Verpflegung', 'Gesunde Mahlzeiten im Arbeitskontext', 'Monatliche Auszahlung über das Benefit-Jahr'],
+    receipt: 'Belege, Abrechnungen oder Nachweise des jeweiligen Angebots.',
+    hrNote: 'Bei laufenden Zuschüssen sind Zeitraum und Betrag besonders wichtig.',
+  },
+};
 
 function payoutLabel(mode) {
   return mode === 'monthly_12' ? 'Monatlich über 12 Monate' : 'Einmalig';
@@ -49,12 +110,32 @@ function formatEuroInput(value) {
   return new Intl.NumberFormat('de-AT', { maximumFractionDigits: 2 }).format(parsed);
 }
 
+function detailForBenefit(benefit) {
+  return benefitDetails[benefit.title] || {
+    imagePosition: '50% center',
+    summary: benefit.description || 'Zusätzliche Informationen zu diesem Benefit.',
+    highlights: ['Betrag und Zweck prüfen', 'Passende Nachweise sammeln', 'Bei Fragen HR kontaktieren'],
+    receipt: benefit.receiptRequired ? 'Bitte lade einen passenden Zahlungs- oder Leistungsnachweis hoch.' : 'Für diesen Benefit ist aktuell kein Nachweis erforderlich.',
+    hrNote: 'Die Prüfung erfolgt anhand deiner Angaben und der hinterlegten Unterlagen.',
+  };
+}
+
+function benefitImageStyle(detail) {
+  return {
+    backgroundImage: `url(${benefitDetailImage})`,
+    backgroundPosition: detail.imagePosition,
+    backgroundSize: '700% 100%',
+  };
+}
+
 const BenefitSelectionPage = () => {
   const { isEligible } = useAuth();
   const navigate = useNavigate();
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
+  const [uploadingId, setUploadingId] = useState(null);
+  const [deletingAttachmentId, setDeletingAttachmentId] = useState(null);
   const [customBenefit, setCustomBenefit] = useState({ title: '', description: '', amount: '' });
   const [editingCustomId, setEditingCustomId] = useState(null);
   const [customEdit, setCustomEdit] = useState({ title: '', description: '', amount: '' });
@@ -150,6 +231,50 @@ const BenefitSelectionPage = () => {
     } finally {
       setSavingId(null);
     }
+  };
+
+  const handleFileUpload = async (selectedBenefitId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('selectedBenefitId', selectedBenefitId);
+
+    setUploadingId(selectedBenefitId);
+    try {
+      const res = await apiServerClient.fetch('/attachments/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      await updateFromResponse(res);
+      toast.success('Nachweis wurde hochgeladen.');
+    } catch (error) {
+      toast.error(error.message || 'Upload fehlgeschlagen.');
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId) => {
+    setDeletingAttachmentId(attachmentId);
+    try {
+      const res = await apiServerClient.fetch('/attachments/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attachmentId }),
+      });
+      await updateFromResponse(res);
+      toast.success('Nachweis wurde entfernt.');
+    } catch (error) {
+      toast.error(error.message || 'Nachweis konnte nicht entfernt werden.');
+    } finally {
+      setDeletingAttachmentId(null);
+    }
+  };
+
+  const attachmentUrl = (attachment) => {
+    const params = new URLSearchParams({ id: attachment.id });
+    const token = localStorage.getItem('backend_token');
+    if (token) params.set('token', token);
+    return `${API_SERVER_URL}/attachments/file?${params.toString()}`;
   };
 
   const handleAddCustomBenefit = async () => {
@@ -250,6 +375,17 @@ const BenefitSelectionPage = () => {
     return map;
   }, [overview?.selectedBenefits]);
 
+  const attachmentsBySelectedId = useMemo(() => {
+    const map = new Map();
+    (overview?.attachments || []).forEach((attachment) => {
+      const key = attachment.selectedBenefitId;
+      const list = map.get(key) || [];
+      list.push(attachment);
+      map.set(key, list);
+    });
+    return map;
+  }, [overview?.attachments]);
+
   if (loading) {
     return (
       <>
@@ -288,6 +424,65 @@ const BenefitSelectionPage = () => {
   const budgetExceeded = isBudgetExceeded();
   const safeChartData = buildBenefitChartData(selectedBenefits, remainingBudget, annualBudget);
   const handleChartEnter = (_entry, index) => setActiveChartIndex(index);
+  const renderReceiptUpload = (selectedItem, compact = false) => {
+    if (!selectedItem) return null;
+    const itemAttachments = attachmentsBySelectedId.get(selectedItem.id) || [];
+    const isUploading = uploadingId === selectedItem.id;
+
+    return (
+      <div className={compact ? 'mt-3 space-y-2' : 'mb-5 space-y-2 rounded-lg border border-dashed border-border bg-muted/25 p-3'}>
+        {editable && (
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md bg-[#C0A468]/12 px-3 py-2 text-sm font-semibold text-[#8B7138] transition hover:bg-[#C0A468]/20 dark:text-[#EDD38E]">
+            <Upload className="h-4 w-4" />
+            {isUploading ? 'Lädt hoch …' : itemAttachments.length ? 'Weiteren Nachweis hochladen' : 'Nachweis hochladen'}
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.docx"
+              className="hidden"
+              disabled={isUploading}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) handleFileUpload(selectedItem.id, file);
+                event.target.value = '';
+              }}
+            />
+          </label>
+        )}
+
+        {itemAttachments.length > 0 && (
+          <div className="space-y-2">
+            {itemAttachments.map((attachment) => (
+              <div key={attachment.id} className="flex flex-col gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <a
+                  href={attachmentUrl(attachment)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex min-w-0 items-center gap-2 font-medium text-[#8B7138] hover:underline dark:text-[#EDD38E]"
+                >
+                  <FileText className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{attachment.fileName}</span>
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                </a>
+                {editable && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteAttachment(attachment.id)}
+                    disabled={deletingAttachmentId === attachment.id}
+                    className="justify-start text-[#EA5153] hover:bg-[#EA5153]/10 hover:text-[#EA5153] sm:justify-center"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Entfernen
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -344,6 +539,8 @@ const BenefitSelectionPage = () => {
             <section className="grid gap-5 md:grid-cols-2">
               {benefits.map((benefit) => {
                 const selected = selectedByBenefitId.get(benefit.id);
+                const detail = detailForBenefit(benefit);
+                const selectedAttachments = selected ? attachmentsBySelectedId.get(selected.id) || [] : [];
                 return (
                   <article key={benefit.id} className={`rounded-lg border bg-card p-6 shadow-sm transition ${selected ? 'border-[#C0A468]' : 'border-border hover:border-[#C0A468]/70 hover:shadow-md'}`}>
                     <div className="mb-4 flex items-start justify-between gap-4">
@@ -351,7 +548,71 @@ const BenefitSelectionPage = () => {
                         <p className="text-xs font-semibold uppercase text-[#C0A468]">{benefit.category}</p>
                         <h2 className="mt-1 text-xl font-bold">{benefit.title}</h2>
                       </div>
-                      {selected && <Check className="h-5 w-5 text-[#719C6F]" />}
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-9 w-9 rounded-full border-[#C0A468]/40 text-[#8B7138] hover:bg-[#C0A468]/12 dark:text-[#EDD38E]"
+                              aria-label={`Mehr Informationen zu ${benefit.title}`}
+                              title="Mehr Informationen"
+                            >
+                              <Info className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-h-[90vh] overflow-y-auto p-0 sm:max-w-3xl">
+                            <div className="h-56 rounded-t-lg bg-cover bg-center sm:h-72" style={benefitImageStyle(detail)} />
+                            <div className="p-6">
+                              <DialogHeader>
+                                <DialogTitle className="text-2xl">{benefit.title}</DialogTitle>
+                                <DialogDescription>{detail.summary}</DialogDescription>
+                              </DialogHeader>
+
+                              <div className="mt-6 grid gap-4 md:grid-cols-[1fr_16rem]">
+                                <div className="space-y-4">
+                                  <div>
+                                    <p className="mb-2 text-sm font-semibold uppercase text-[#C0A468]">Wofür gedacht</p>
+                                    <ul className="space-y-2 text-sm text-muted-foreground">
+                                      {detail.highlights.map((item) => (
+                                        <li key={item} className="flex gap-2">
+                                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#719C6F]" />
+                                          <span>{item}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                  <div className="rounded-lg border border-border bg-muted/30 p-4">
+                                    <p className="text-sm font-semibold">Nachweis</p>
+                                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{detail.receipt}</p>
+                                  </div>
+                                  <div className="rounded-lg border border-[#C0A468]/25 bg-[#C0A468]/10 p-4">
+                                    <p className="text-sm font-semibold text-[#8B7138] dark:text-[#EDD38E]">Gut zu wissen</p>
+                                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{detail.hrNote}</p>
+                                  </div>
+                                </div>
+
+                                <div className="rounded-lg border border-border bg-card p-4">
+                                  <p className="text-sm text-muted-foreground">Benefit-Wert</p>
+                                  <p className="mt-1 text-2xl font-bold text-[#C0A468]">{currency.format(benefit.fixedAmount)}</p>
+                                  <p className="mt-1 text-xs text-muted-foreground">{payoutLabel(benefit.payoutMode)}</p>
+                                  <div className="mt-4 rounded-md bg-muted/40 p-3 text-sm">
+                                    <p className="font-medium">{benefit.category}</p>
+                                    <p className="mt-1 text-muted-foreground">{benefit.receiptRequired ? 'Nachweis erforderlich' : 'Kein Nachweis erforderlich'}</p>
+                                  </div>
+                                  {selected && (
+                                    <div className="mt-4 rounded-md bg-[#719C6F]/10 p-3 text-sm font-medium text-[#315B30] dark:text-[#A9D0A6]">
+                                      Bereits ausgewählt
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                        {selected && <Check className="h-5 w-5 text-[#719C6F]" />}
+                      </div>
                     </div>
                     <p className="mb-5 min-h-16 text-sm text-muted-foreground">{benefit.description}</p>
                     <div className="mb-5 flex items-end justify-between gap-4">
@@ -360,12 +621,39 @@ const BenefitSelectionPage = () => {
                         <p className="text-xs text-muted-foreground">{payoutLabel(benefit.payoutMode)}</p>
                       </div>
                       {benefit.receiptRequired && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs">
-                          <ReceiptText className="h-3.5 w-3.5" />
-                          Nachweis
-                        </span>
+                        selected && editable ? (
+                          <label className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-[#C0A468]/12 px-2.5 py-1 text-xs font-semibold text-[#8B7138] hover:bg-[#C0A468]/20 dark:text-[#EDD38E]">
+                            <ReceiptText className="h-3.5 w-3.5" />
+                            {uploadingId === selected.id ? 'Lädt hoch …' : selectedAttachments.length ? `${selectedAttachments.length} Nachweis${selectedAttachments.length === 1 ? '' : 'e'}` : 'Nachweis hochladen'}
+                            <input
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png,.docx"
+                              className="hidden"
+                              disabled={uploadingId === selected.id}
+                              onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                if (file) handleFileUpload(selected.id, file);
+                                event.target.value = '';
+                              }}
+                            />
+                          </label>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!selected) {
+                                toast.info('Wähle den Benefit zuerst aus, dann kannst du hier den Nachweis hochladen.');
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium transition hover:bg-muted/80"
+                          >
+                            <ReceiptText className="h-3.5 w-3.5" />
+                            Nachweis
+                          </button>
+                        )
                       )}
                     </div>
+                    {benefit.receiptRequired && selected && selectedAttachments.length > 0 && renderReceiptUpload(selected)}
                     {selected ? (
                       <div className="flex gap-2">
                         <Button disabled className="flex-1 bg-[#719C6F] text-white">Ausgewählt</Button>
@@ -567,6 +855,7 @@ const BenefitSelectionPage = () => {
                               Unternehmen {currency.format(item.coveredAmount)}
                               {item.ownContributionAmount > 0 ? ` · Eigenanteil ${currency.format(item.ownContributionAmount)}` : ''}
                             </p>
+                            {(item.benefit?.receiptRequired || item.isCustomBenefit) && renderReceiptUpload(item, true)}
                             {item.isCustomBenefit && editable && (
                               <div className="mt-3 flex gap-2">
                                 <Button type="button" size="sm" variant="outline" onClick={() => startEditingCustom(item)} className="flex-1">
