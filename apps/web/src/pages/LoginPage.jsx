@@ -16,37 +16,37 @@ const benefitCards = [
   {
     label: 'Gesundheit',
     image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=900&q=80',
-    className: 'left-[5.5%] top-[4%] -rotate-3 hidden xl:block',
+    className: 'lg:left-[2%] lg:top-[6%] lg:-rotate-3 xl:left-[5.5%] xl:top-[4%]',
     objectPosition: 'center',
   },
   {
     label: 'Mobilität',
     image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=900&q=80',
-    className: 'left-[calc(17.5%_-_2.5rem)] top-[38%] rotate-2 hidden xl:block',
+    className: 'lg:left-[3%] lg:top-[38%] lg:rotate-2 xl:left-[calc(17.5%_-_2.5rem)] xl:top-[38%]',
     objectPosition: 'center',
   },
   {
     label: 'Fitness',
     image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=900&q=80',
-    className: 'left-[6%] bottom-[5%] -rotate-2 hidden xl:block',
+    className: 'lg:left-[2.5%] lg:bottom-[6%] lg:-rotate-2 xl:left-[6%] xl:bottom-[5%]',
     objectPosition: 'center',
   },
   {
     label: 'Weiterbildung',
     image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=900&q=80',
-    className: 'right-[5.5%] top-[4%] rotate-3 hidden xl:block',
+    className: 'lg:right-[2%] lg:top-[6%] lg:rotate-3 xl:right-[5.5%] xl:top-[4%]',
     objectPosition: 'center',
   },
   {
     label: 'Homeoffice',
     image: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=900&q=80',
-    className: 'right-[calc(17.5%_-_2.5rem)] top-[38%] -rotate-2 hidden xl:block',
+    className: 'lg:right-[3%] lg:top-[38%] lg:-rotate-2 xl:right-[calc(17.5%_-_2.5rem)] xl:top-[38%]',
     objectPosition: 'center',
   },
   {
     label: 'Ernährung',
     image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=900&q=80',
-    className: 'right-[6%] bottom-[5%] rotate-2 hidden xl:block',
+    className: 'lg:right-[2.5%] lg:bottom-[6%] lg:rotate-2 xl:right-[6%] xl:bottom-[5%]',
     objectPosition: 'center',
   },
 ];
@@ -62,7 +62,7 @@ function BenefitImageCard({ card, compact = false }) {
       className={
         compact
           ? 'relative h-28 w-48 overflow-visible rounded-lg border-[6px] border-white bg-white shadow-xl ring-1 ring-black/5 dark:border-white dark:ring-white/10'
-          : `absolute h-[13.5rem] w-[23rem] overflow-visible rounded-lg border-[8px] border-white bg-white shadow-2xl ring-1 ring-black/5 dark:border-white dark:ring-white/10 2xl:h-56 2xl:w-96 ${card.className}`
+          : `absolute hidden h-36 w-60 overflow-visible rounded-lg border-[6px] border-white bg-white shadow-2xl ring-1 ring-black/5 dark:border-white dark:ring-white/10 lg:block xl:h-[13.5rem] xl:w-[23rem] xl:border-[8px] 2xl:h-56 2xl:w-96 ${card.className}`
       }
       aria-hidden="true"
     >
@@ -158,7 +158,7 @@ const LoginPage = () => {
 
       <main className="benefit-ambient-bg login-chalk-bg relative min-h-[calc(100vh-4rem)] overflow-hidden px-4 py-8 text-[#222222] transition-colors duration-300 dark:text-[#F7F2E8] sm:py-10">
         <div className="login-chalk-layer pointer-events-none absolute inset-0 z-0" />
-        <div className="pointer-events-none absolute inset-x-0 top-7 hidden justify-between px-8 lg:flex xl:hidden">
+        <div className="pointer-events-none absolute inset-x-0 top-7 hidden justify-between px-8 md:flex lg:hidden">
           {tabletCards.map((card) => (
             <BenefitImageCard key={`tablet-${card.label}`} card={card} compact />
           ))}
