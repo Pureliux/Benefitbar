@@ -170,13 +170,9 @@ const LoginPage = () => {
         <div className="relative z-10 mx-auto flex min-h-[calc(100vh-8rem)] max-w-md items-center justify-center lg:min-h-[calc(100vh-9rem)]">
           <section className="w-full rounded-lg border border-[#E7DDBF] bg-white/95 p-6 shadow-2xl shadow-black/10 backdrop-blur-sm transition-colors duration-300 dark:border-[#3A3E46] dark:bg-[#202329]/95 dark:shadow-black/40 sm:p-8">
             <div className="mb-8 text-center">
-              <div className="mx-auto flex max-w-[20rem] justify-center rounded-md bg-white/95 px-3 py-2 dark:bg-white">
-                <img
-                  src="/brand/benefitbar-login-logo.png"
-                  alt="Benefitbar"
-                  className="h-auto max-h-24 max-w-full object-contain"
-                />
-              </div>
+              <h1 className="font-['Inter',sans-serif] text-2xl font-bold leading-tight text-[#C0A468]">
+                Benefitbar
+              </h1>
             </div>
 
             <ErrorAlert message={errorMsg} onDismiss={() => setErrorMsg(null)} />
