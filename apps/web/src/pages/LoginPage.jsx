@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,40 @@ import ErrorAlert from '@/components/ErrorAlert.jsx';
 import { validateAllowedLoginEmail } from '@/lib/emailAccess';
 
 const accessSuccessMessage = 'Falls für diese E-Mail-Adresse ein aktiver Zugang besteht, wurde eine E-Mail mit weiteren Schritten versendet.';
+const wordmarkFontStylesheet = 'https://fonts.googleapis.com/css2?family=Archivo:wght@800;900&family=Bricolage+Grotesque:wght@800&family=Chivo:wght@800;900&family=DM+Sans:wght@800;900&family=Exo+2:wght@800;900&family=Inter:wght@800;900&family=Jost:wght@800;900&family=Kanit:wght@800;900&family=Lexend:wght@800;900&family=Manrope:wght@800&family=Montserrat:wght@800;900&family=Nunito+Sans:wght@800;900&family=Outfit:wght@800;900&family=Plus+Jakarta+Sans:wght@800;900&family=Poppins:wght@800;900&family=Raleway:wght@800;900&family=Rubik:wght@800;900&family=Sora:wght@800&family=Space+Grotesk:wght@700&family=Urbanist:wght@800;900&family=Work+Sans:wght@800;900&display=swap';
+
+const wordmarkFontOptions = [
+  { label: 'Archivo', family: "'Archivo', ui-sans-serif, system-ui, sans-serif", weight: 900, scaleX: 1.04 },
+  { label: 'Bricolage Grotesque', family: "'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif", weight: 800, scaleX: 1.04 },
+  { label: 'Chivo', family: "'Chivo', ui-sans-serif, system-ui, sans-serif", weight: 900, scaleX: 1.04 },
+  { label: 'DM Sans', family: "'DM Sans', ui-sans-serif, system-ui, sans-serif", weight: 900, scaleX: 1.04 },
+  { label: 'Exo 2', family: "'Exo 2', ui-sans-serif, system-ui, sans-serif", weight: 900, scaleX: 1.05 },
+  { label: 'Inter', family: "'Inter', ui-sans-serif, system-ui, sans-serif", weight: 900, scaleX: 1.04 },
+  { label: 'Jost', family: "'Jost', ui-sans-serif, system-ui, sans-serif", weight: 900, scaleX: 1.04 },
+  { label: 'Kanit', family: "'Kanit', ui-sans-serif, system-ui, sans-serif", weight: 800, scaleX: 1.04 },
+  { label: 'Lexend', family: "'Lexend', ui-sans-serif, system-ui, sans-serif", weight: 900, scaleX: 1.02 },
+  { label: 'Manrope', family: "'Manrope', ui-sans-serif, system-ui, sans-serif", weight: 800, scaleX: 1.04 },
+  { label: 'Montserrat', family: "'Montserrat', ui-sans-serif, system-ui, sans-serif", weight: 900, scaleX: 1.02 },
+  { label: 'Nunito Sans', family: "'Nunito Sans', ui-sans-serif, system-ui, sans-serif", weight: 900, scaleX: 1.03 },
+  { label: 'Outfit', family: "'Outfit', ui-sans-serif, system-ui, sans-serif", weight: 900, scaleX: 1.04 },
+  { label: 'Plus Jakarta Sans', family: "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif", weight: 900, scaleX: 1.03 },
+  { label: 'Poppins', family: "'Poppins', ui-sans-serif, system-ui, sans-serif", weight: 900, scaleX: 1.04 },
+  { label: 'Raleway', family: "'Raleway', ui-sans-serif, system-ui, sans-serif", weight: 900, scaleX: 1.03 },
+  { label: 'Rubik', family: "'Rubik', ui-sans-serif, system-ui, sans-serif", weight: 900, scaleX: 1.03 },
+  { label: 'Sora', family: "'Sora', ui-sans-serif, system-ui, sans-serif", weight: 800, scaleX: 1.03 },
+  { label: 'Space Grotesk', family: "'Space Grotesk', ui-sans-serif, system-ui, sans-serif", weight: 700, scaleX: 1.05 },
+  { label: 'Urbanist', family: "'Urbanist', ui-sans-serif, system-ui, sans-serif", weight: 900, scaleX: 1.04 },
+  { label: 'Work Sans', family: "'Work Sans', ui-sans-serif, system-ui, sans-serif", weight: 900, scaleX: 1.03 },
+  { label: 'Aptos Display', family: "'Aptos Display', Aptos, ui-sans-serif, system-ui, sans-serif", weight: 800, scaleX: 1.05 },
+  { label: 'Bahnschrift', family: "Bahnschrift, 'DIN Alternate', ui-sans-serif, system-ui, sans-serif", weight: 800, scaleX: 1.05 },
+  { label: 'Segoe UI Variable', family: "'Segoe UI Variable Display', 'Segoe UI', ui-sans-serif, system-ui, sans-serif", weight: 800, scaleX: 1.05 },
+];
+
+function storedWordmarkFontIndex() {
+  if (typeof window === 'undefined') return 0;
+  const stored = Number(window.localStorage.getItem('benefitbar_wordmark_font_index'));
+  return Number.isInteger(stored) && stored >= 0 && stored < wordmarkFontOptions.length ? stored : 0;
+}
 
 const benefitCards = [
   {
@@ -93,10 +127,20 @@ const LoginPage = () => {
   const [loadingAction, setLoadingAction] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
+  const [wordmarkFontIndex, setWordmarkFontIndex] = useState(storedWordmarkFontIndex);
+  const wordmarkFont = wordmarkFontOptions[wordmarkFontIndex] || wordmarkFontOptions[0];
 
   const clearMessages = () => {
     setErrorMsg(null);
     setSuccessMsg(null);
+  };
+
+  const changeWordmarkFont = (direction) => {
+    setWordmarkFontIndex((current) => {
+      const next = (current + direction + wordmarkFontOptions.length) % wordmarkFontOptions.length;
+      window.localStorage.setItem('benefitbar_wordmark_font_index', String(next));
+      return next;
+    });
   };
 
   const handleLogin = async (e) => {
@@ -152,6 +196,9 @@ const LoginPage = () => {
     <>
       <Helmet>
         <title>Anmelden - Tchibo Benefitbar</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="stylesheet" href={wordmarkFontStylesheet} />
       </Helmet>
 
       <Header />
@@ -174,14 +221,42 @@ const LoginPage = () => {
               <h1
                 className="inline-block px-1 text-4xl font-extrabold leading-none tracking-normal text-[#C0A468] dark:text-[#D4B978] sm:text-5xl"
                 style={{
-                  fontFamily: "'Segoe UI Variable Display', 'Aptos Display', Inter, ui-sans-serif, system-ui, sans-serif",
-                  fontStretch: '108%',
-                  transform: 'scaleX(1.05)',
+                  fontFamily: wordmarkFont.family,
+                  fontWeight: wordmarkFont.weight,
+                  transform: `scaleX(${wordmarkFont.scaleX})`,
                   transformOrigin: 'center',
                 }}
               >
                 Benefitbar
               </h1>
+              <div className="mx-auto mt-4 flex w-full max-w-[17rem] items-center justify-between rounded-lg border border-[#E7DDBF] bg-[#F7F2E8]/80 p-1 text-[#8B7138] shadow-sm dark:border-[#3A3E46] dark:bg-[#2B2F36] dark:text-[#D4B978]">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => changeWordmarkFont(-1)}
+                  className="h-8 w-8 rounded-md text-[#8B7138] hover:bg-white/80 hover:text-[#222222] dark:text-[#D4B978] dark:hover:bg-[#3A3E46] dark:hover:text-white"
+                  aria-label="Vorherige Schriftart testen"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="min-w-0 px-2 text-center">
+                  <p className="text-[10px] font-bold uppercase leading-none">Font-Test</p>
+                  <p className="mt-1 max-w-[11rem] truncate text-xs font-semibold leading-none text-[#222222] dark:text-[#F7F2E8]">
+                    {wordmarkFontIndex + 1}/{wordmarkFontOptions.length} {wordmarkFont.label}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => changeWordmarkFont(1)}
+                  className="h-8 w-8 rounded-md text-[#8B7138] hover:bg-white/80 hover:text-[#222222] dark:text-[#D4B978] dark:hover:bg-[#3A3E46] dark:hover:text-white"
+                  aria-label="Nächste Schriftart testen"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             <ErrorAlert message={errorMsg} onDismiss={() => setErrorMsg(null)} />
