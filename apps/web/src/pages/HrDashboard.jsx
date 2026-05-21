@@ -110,7 +110,7 @@ const HrDashboard = () => {
   const [lastAction, setLastAction] = useState(null);
   const [expandedNoteId, setExpandedNoteId] = useState(null);
 
-  const loadSubmissions = async ({ silent = false } = {}) => {
+  const loadSubmissions = async ({ silent = false, preferredSelectedId = selectedId } = {}) => {
     if (!silent) setLoadingList(true);
     try {
       const params = new URLSearchParams({ queue });
@@ -124,14 +124,18 @@ const HrDashboard = () => {
         throw new Error(data.error || 'HR-Daten konnten nicht geladen werden.');
       }
 
-      setSubmissions(data.submissions || []);
+      const nextSubmissions = data.submissions || [];
+      const nextSelected = preferredSelectedId && (silent || nextSubmissions.some((item) => item.id === preferredSelectedId))
+        ? preferredSelectedId
+        : nextSubmissions[0]?.id || null;
+
+      setSubmissions(nextSubmissions);
       setYears(data.years || []);
-      const nextSelected = selectedId && (silent || (data.submissions || []).some((item) => item.id === selectedId))
-        ? selectedId
-        : data.submissions?.[0]?.id || null;
       setSelectedId(nextSelected);
+      return nextSelected;
     } catch (error) {
       toast.error(error.message || 'HR-Daten konnten nicht geladen werden.');
+      return selectedId;
     } finally {
       if (!silent) setLoadingList(false);
     }
@@ -198,10 +202,8 @@ const HrDashboard = () => {
 
   const refreshCurrent = async ({ preserveScroll = false, silent = false } = {}) => {
     const scrollPosition = preserveScroll ? { x: window.scrollX, y: window.scrollY } : null;
-    await Promise.all([
-      loadSubmissions({ silent }),
-      loadDetail(selectedId, { silent }),
-    ]);
+    const nextSelectedId = await loadSubmissions({ silent, preferredSelectedId: selectedId });
+    await loadDetail(nextSelectedId, { silent });
     if (scrollPosition) {
       window.requestAnimationFrame(() => window.scrollTo(scrollPosition.x, scrollPosition.y));
     }
