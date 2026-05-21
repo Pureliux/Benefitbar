@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v24';
+const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v25';
 const LOGIN_EMAIL_ERROR_MESSAGE = 'Bitte verwende deine @eduscho.at-Adresse oder eine freigegebene E-Mail-Adresse.';
 
 header('X-Content-Type-Options: nosniff');
@@ -289,7 +289,9 @@ function migrate(): void
     ");
 
     ensure_column($pdo, 'bb_users', 'is_hr', 'TINYINT(1) NOT NULL DEFAULT 0 AFTER is_admin');
+    ensure_column($pdo, 'bb_benefit_years', 'auto_assignment_date', 'DATE NULL AFTER reminder_date');
     ensure_column($pdo, 'bb_benefit_years', 'review_deadline', 'DATETIME NULL AFTER auto_assignment_date');
+    ensure_column($pdo, 'bb_submissions', 'needs_info_reason', 'TEXT NULL AFTER admin_comment');
     ensure_column($pdo, 'bb_submissions', 'hr_decided_by', 'INT UNSIGNED NULL AFTER needs_info_reason');
     ensure_column($pdo, 'bb_submissions', 'hr_decided_at', 'DATETIME NULL AFTER hr_decided_by');
     ensure_column($pdo, 'bb_selected_benefits', 'hr_review_status', "VARCHAR(40) NOT NULL DEFAULT 'open' AFTER status");
@@ -302,20 +304,81 @@ function migrate(): void
     bootstrap_admin();
 }
 
-function ensure_column(PDO $pdo, string $table, string $column, string $definition): void
+function valid_migration_target(string $table, string $column): bool
 {
     $allowedTables = ['bb_users', 'bb_auth_log', 'bb_email_log', 'bb_benefit_years', 'bb_benefits', 'bb_submissions', 'bb_selected_benefits', 'bb_attachments'];
-    if (!in_array($table, $allowedTables, true) || !preg_match('/^[a-zA-Z0-9_]+$/', $column)) {
+    return in_array($table, $allowedTables, true) && preg_match('/^[a-zA-Z0-9_]+$/', $column) === 1;
+}
+
+function column_exists(PDO $pdo, string $table, string $column): bool
+{
+    if (!valid_migration_target($table, $column)) {
         throw new RuntimeException('invalid_migration_column');
     }
 
-    $stmt = $pdo->prepare("SHOW COLUMNS FROM `{$table}` LIKE ?");
-    $stmt->execute([$column]);
-    if ($stmt->fetch()) {
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) AS count
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = ?
+          AND COLUMN_NAME = ?
+    ");
+    $stmt->execute([$table, $column]);
+
+    return (int)$stmt->fetchColumn() > 0;
+}
+
+function strip_after_clause(string $definition): string
+{
+    return trim((string)preg_replace('/\s+AFTER\s+`?[a-zA-Z0-9_]+`?\s*$/i', '', $definition));
+}
+
+function after_column_name(string $definition): ?string
+{
+    if (preg_match('/\s+AFTER\s+`?([a-zA-Z0-9_]+)`?\s*$/i', $definition, $matches) === 1) {
+        return $matches[1];
+    }
+
+    return null;
+}
+
+function duplicate_column_error(Throwable $error): bool
+{
+    $message = strtolower($error->getMessage());
+    return strpos($message, 'duplicate column') !== false || strpos($message, '1060') !== false || (string)$error->getCode() === '42S21';
+}
+
+function ensure_column(PDO $pdo, string $table, string $column, string $definition): void
+{
+    if (!valid_migration_target($table, $column)) {
+        throw new RuntimeException('invalid_migration_column');
+    }
+
+    if (column_exists($pdo, $table, $column)) {
         return;
     }
 
-    $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$definition}");
+    $afterColumn = after_column_name($definition);
+    $definitionToUse = $definition;
+    if ($afterColumn !== null && !column_exists($pdo, $table, $afterColumn)) {
+        $definitionToUse = strip_after_clause($definition);
+    }
+
+    try {
+        $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$definitionToUse}");
+    } catch (Throwable $error) {
+        if (duplicate_column_error($error) || column_exists($pdo, $table, $column)) {
+            return;
+        }
+
+        $fallbackDefinition = strip_after_clause($definitionToUse);
+        if ($fallbackDefinition !== $definitionToUse) {
+            $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$fallbackDefinition}");
+            return;
+        }
+
+        throw $error;
+    }
 }
 
 function active_process_benefit_year_number(): int
@@ -357,20 +420,25 @@ function default_seed_benefits(): array
 
 function ensure_benefit_year_record(PDO $pdo, int $year): int
 {
-    $stmt = $pdo->prepare('SELECT * FROM bb_benefit_years WHERE year = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT * FROM bb_benefit_years WHERE `year` = ? LIMIT 1');
     $stmt->execute([$year]);
     $benefitYear = $stmt->fetch();
     $schedule = benefit_year_schedule($year);
     $now = now_sql();
 
     if ($benefitYear) {
+        $nextStatus = (string)($benefitYear['status'] ?? 'open');
+        if ($nextStatus === 'archived' && $year >= 2027) {
+            $nextStatus = 'open';
+        }
+
         $pdo->prepare("
             UPDATE bb_benefit_years
             SET process_open_date = COALESCE(process_open_date, ?),
                 submission_deadline = COALESCE(submission_deadline, ?),
                 reminder_date = COALESCE(reminder_date, ?),
                 review_deadline = COALESCE(review_deadline, ?),
-                status = IF(status = 'archived' AND year >= 2027, 'open', status),
+                status = ?,
                 updated_at = ?
             WHERE id = ?
         ")->execute([
@@ -378,6 +446,7 @@ function ensure_benefit_year_record(PDO $pdo, int $year): int
             $schedule['submission_deadline'],
             $schedule['reminder_date'],
             $schedule['review_deadline'],
+            $nextStatus,
             $now,
             $benefitYear['id'],
         ]);
@@ -386,7 +455,7 @@ function ensure_benefit_year_record(PDO $pdo, int $year): int
 
     $pdo->prepare("
         INSERT INTO bb_benefit_years (
-            year, annual_budget, process_open_date, submission_deadline, reminder_date,
+            `year`, annual_budget, process_open_date, submission_deadline, reminder_date,
             review_deadline, status, allow_custom_benefits, created_at, updated_at
         ) VALUES (?, 1000.00, ?, ?, ?, ?, 'open', 1, ?, ?)
     ")->execute([
@@ -414,8 +483,8 @@ function copy_benefits_from_previous_year(PDO $pdo, int $targetYearId, int $targ
     $sourceStmt = $pdo->prepare("
         SELECT id
         FROM bb_benefit_years
-        WHERE year < ?
-        ORDER BY year DESC
+        WHERE `year` < ?
+        ORDER BY `year` DESC
         LIMIT 1
     ");
     $sourceStmt->execute([$targetYear]);
@@ -491,7 +560,7 @@ function seed_benefit_data(PDO $pdo): void
 function ensure_base_benefit_calendar(PDO $pdo): void
 {
     $now = now_sql();
-    $pdo->prepare("UPDATE bb_benefit_years SET status = 'archived', updated_at = ? WHERE year = 2026 AND status <> 'archived'")
+    $pdo->prepare("UPDATE bb_benefit_years SET status = 'archived', updated_at = ? WHERE `year` = 2026 AND status <> 'archived'")
         ->execute([$now]);
 
     $benefitYearId = ensure_benefit_year_record($pdo, 2027);
@@ -839,14 +908,14 @@ function current_benefit_year(): array
     $benefitYearId = ensure_benefit_year_record(db(), $targetYear);
     ensure_benefits_for_year(db(), $benefitYearId, $targetYear);
 
-    $stmt = db()->prepare("SELECT * FROM bb_benefit_years WHERE year = ? AND status <> 'archived' LIMIT 1");
+    $stmt = db()->prepare("SELECT * FROM bb_benefit_years WHERE `year` = ? AND status <> 'archived' LIMIT 1");
     $stmt->execute([$targetYear]);
     $year = $stmt->fetch();
     if ($year) {
         return $year;
     }
 
-    $stmt = db()->query("SELECT * FROM bb_benefit_years WHERE status <> 'archived' ORDER BY year DESC LIMIT 1");
+    $stmt = db()->query("SELECT * FROM bb_benefit_years WHERE status <> 'archived' ORDER BY `year` DESC LIMIT 1");
     $year = $stmt->fetch();
     if ($year) {
         return $year;
@@ -2311,7 +2380,7 @@ function send_submission_notifications(array $user, array $year, array $submissi
 
 function available_benefit_year_numbers(): array
 {
-    $stmt = db()->query('SELECT year FROM bb_benefit_years ORDER BY year DESC');
+    $stmt = db()->query('SELECT `year` FROM bb_benefit_years ORDER BY `year` DESC');
     return array_map(function ($row) {
         return (int)$row['year'];
     }, $stmt->fetchAll());
@@ -2370,7 +2439,7 @@ function handle_hr_submissions(): void
         $params[] = $status;
     }
     if ($year !== '' && $year !== 'all') {
-        $where[] = 'byr.year = ?';
+        $where[] = 'byr.`year` = ?';
         $params[] = (int)$year;
     }
     if ($search !== '') {
@@ -2399,7 +2468,7 @@ function handle_hr_submissions(): void
             u.is_admin,
             u.is_hr,
             byr.id benefit_year_id,
-            byr.year benefit_year,
+            byr.`year` benefit_year,
             COALESCE(stats.selected_count, 0) selected_count,
             COALESCE(stats.checked_count, 0) checked_count
         FROM bb_submissions s
