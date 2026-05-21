@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v29';
+const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v30';
 const LOGIN_EMAIL_ERROR_MESSAGE = 'Bitte verwende deine @eduscho.at-Adresse oder eine freigegebene E-Mail-Adresse.';
 const FIRST_BENEFIT_YEAR = 2027;
 const FIRST_SELECTION_OPEN_DATE = '2026-05-21';
@@ -286,6 +286,8 @@ function migrate(): void
             file_name VARCHAR(255) NOT NULL,
             file_path VARCHAR(255) NOT NULL,
             file_type VARCHAR(120) NOT NULL DEFAULT '',
+            file_blob LONGBLOB NULL,
+            file_size INT UNSIGNED NULL,
             uploaded_at DATETIME NOT NULL,
             created_at DATETIME NOT NULL,
             INDEX idx_attachment_selected (selected_benefit_id),
@@ -303,6 +305,9 @@ function migrate(): void
     ensure_column($pdo, 'bb_selected_benefits', 'hr_review_note', 'TEXT NULL AFTER hr_review_status');
     ensure_column($pdo, 'bb_selected_benefits', 'hr_reviewed_by', 'INT UNSIGNED NULL AFTER hr_review_note');
     ensure_column($pdo, 'bb_selected_benefits', 'hr_reviewed_at', 'DATETIME NULL AFTER hr_reviewed_by');
+    ensure_column($pdo, 'bb_attachments', 'file_blob', 'LONGBLOB NULL AFTER file_type');
+    ensure_column($pdo, 'bb_attachments', 'file_size', 'INT UNSIGNED NULL AFTER file_blob');
+    backfill_attachment_blobs($pdo);
 
     seed_benefit_data($pdo);
     ensure_base_benefit_calendar($pdo);
@@ -907,6 +912,7 @@ function safe_attachment(array $attachment): array
         'employeeId' => (string)$attachment['user_id'],
         'fileName' => $attachment['file_name'],
         'fileType' => $attachment['file_type'],
+        'fileSize' => isset($attachment['file_size']) ? (int)$attachment['file_size'] : null,
         'uploadedAt' => $attachment['uploaded_at'],
     ];
 }
@@ -992,7 +998,12 @@ function load_selected_benefits(int $submissionId): array
 
 function load_attachments_for_user(int $userId): array
 {
-    $stmt = db()->prepare('SELECT * FROM bb_attachments WHERE user_id = ? ORDER BY uploaded_at DESC');
+    $stmt = db()->prepare('
+        SELECT id, selected_benefit_id, user_id, file_name, file_path, file_type, file_size, uploaded_at, created_at
+        FROM bb_attachments
+        WHERE user_id = ?
+        ORDER BY uploaded_at DESC
+    ');
     $stmt->execute([$userId]);
     return $stmt->fetchAll();
 }
@@ -1000,7 +1011,7 @@ function load_attachments_for_user(int $userId): array
 function load_attachments_for_submission(int $submissionId): array
 {
     $stmt = db()->prepare("
-        SELECT a.*
+        SELECT a.id, a.selected_benefit_id, a.user_id, a.file_name, a.file_path, a.file_type, a.file_size, a.uploaded_at, a.created_at
         FROM bb_attachments a
         INNER JOIN bb_selected_benefits sb ON sb.id = a.selected_benefit_id
         WHERE sb.submission_id = ?
@@ -1490,11 +1501,15 @@ function build_email_body(string $html, array $attachments, string &$contentType
 
     foreach ($attachments as $attachment) {
         $path = (string)($attachment['path'] ?? '');
-        if ($path === '' || !is_file($path) || !is_readable($path)) {
+        $contents = array_key_exists('content', $attachment) ? (string)$attachment['content'] : null;
+        if ($contents === null && $path !== '' && is_file($path) && is_readable($path)) {
+            $contents = (string)file_get_contents($path);
+        }
+        if ($contents === null || $contents === '') {
             continue;
         }
 
-        $filename = sanitize_email_header((string)($attachment['name'] ?? basename($path)));
+        $filename = sanitize_email_header((string)($attachment['name'] ?? ($path !== '' ? basename($path) : 'nachweis')));
         $mimeType = sanitize_email_header((string)($attachment['type'] ?? 'application/octet-stream'));
         if ($mimeType === '') {
             $mimeType = 'application/octet-stream';
@@ -1504,7 +1519,7 @@ function build_email_body(string $html, array $attachments, string &$contentType
             . "Content-Type: {$mimeType}; name=\"{$filename}\"\r\n"
             . "Content-Transfer-Encoding: base64\r\n"
             . "Content-Disposition: attachment; filename=\"{$filename}\"\r\n\r\n"
-            . chunk_split(base64_encode((string)file_get_contents($path)))
+            . chunk_split(base64_encode($contents))
             . "\r\n";
     }
 
@@ -2117,6 +2132,45 @@ function attachment_absolute_path(array $attachment): ?string
     return $path;
 }
 
+function attachment_binary_contents(array $attachment): ?string
+{
+    if (array_key_exists('file_blob', $attachment) && $attachment['file_blob'] !== null && $attachment['file_blob'] !== '') {
+        return (string)$attachment['file_blob'];
+    }
+
+    $path = attachment_absolute_path($attachment);
+    if ($path && is_file($path) && is_readable($path)) {
+        $contents = file_get_contents($path);
+        return $contents === false ? null : $contents;
+    }
+
+    return null;
+}
+
+function backfill_attachment_blobs(PDO $pdo): void
+{
+    try {
+        $stmt = $pdo->query("
+            SELECT id, file_path
+            FROM bb_attachments
+            WHERE file_blob IS NULL
+              AND file_path IS NOT NULL
+              AND file_path <> ''
+            LIMIT 100
+        ");
+        $update = $pdo->prepare('UPDATE bb_attachments SET file_blob = ?, file_size = COALESCE(file_size, ?) WHERE id = ?');
+        foreach ($stmt->fetchAll() as $attachment) {
+            $contents = attachment_binary_contents($attachment);
+            if ($contents === null) {
+                continue;
+            }
+            $update->execute([$contents, strlen($contents), $attachment['id']]);
+        }
+    } catch (Throwable $error) {
+        error_log('Benefitbar attachment backfill failed: ' . $error->getMessage());
+    }
+}
+
 function delete_attachment_file(array $attachment): void
 {
     $path = attachment_absolute_path($attachment);
@@ -2205,8 +2259,8 @@ function handle_attachment_file(): void
         json_response(['success' => false, 'error' => 'Nachweis wurde nicht gefunden.', 'errorCode' => 'attachment_not_found'], 404);
     }
 
-    $path = attachment_absolute_path($attachment);
-    if (!$path || !is_file($path)) {
+    $contents = attachment_binary_contents($attachment);
+    if ($contents === null) {
         json_response(['success' => false, 'error' => 'Datei wurde nicht gefunden.', 'errorCode' => 'file_not_found'], 404);
     }
 
@@ -2214,10 +2268,10 @@ function handle_attachment_file(): void
     $disposition = !empty($_GET['download']) ? 'attachment' : 'inline';
 
     header('Content-Type: ' . mime_type_for_attachment($attachment));
-    header('Content-Length: ' . filesize($path));
+    header('Content-Length: ' . strlen($contents));
     header('Content-Disposition: ' . $disposition . '; filename="' . $filename . '"');
     header('Cache-Control: private, max-age=300');
-    readfile($path);
+    echo $contents;
     exit;
 }
 
@@ -2251,23 +2305,30 @@ function handle_upload_attachment(): void
         json_response(['success' => false, 'error' => 'Dateityp ist nicht erlaubt.', 'errorCode' => 'invalid_file_type'], 400);
     }
 
+    $contents = file_get_contents((string)$file['tmp_name']);
+    if ($contents === false || $contents === '') {
+        json_response(['success' => false, 'error' => 'Upload konnte nicht gelesen werden.', 'errorCode' => 'upload_read_failed'], 400);
+    }
+    $fileSize = strlen($contents);
+
     $uploadDir = __DIR__ . '/uploads';
     if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
+        @mkdir($uploadDir, 0755, true);
     }
 
     $storedName = $user['id'] . '-' . $selectedBenefitId . '-' . bin2hex(random_bytes(8)) . '.' . $extension;
     $target = $uploadDir . '/' . $storedName;
-    if (!move_uploaded_file($file['tmp_name'], $target)) {
-        json_response(['success' => false, 'error' => 'Upload konnte nicht gespeichert werden.', 'errorCode' => 'upload_store_failed'], 500);
+    $filePath = '';
+    if (is_dir($uploadDir) && is_writable($uploadDir) && move_uploaded_file($file['tmp_name'], $target)) {
+        $filePath = 'uploads/' . $storedName;
     }
 
     $now = now_sql();
     db()->prepare("
         INSERT INTO bb_attachments (
-            selected_benefit_id, user_id, file_name, file_path, file_type, uploaded_at, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-    ")->execute([$selectedBenefitId, $user['id'], $originalName, 'uploads/' . $storedName, (string)$file['type'], $now, $now]);
+            selected_benefit_id, user_id, file_name, file_path, file_type, file_blob, file_size, uploaded_at, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ")->execute([$selectedBenefitId, $user['id'], $originalName, $filePath, (string)$file['type'], $contents, $fileSize, $now, $now]);
 
     json_response(benefit_payload_for_user($user));
 }
@@ -2412,12 +2473,12 @@ function email_attachments_for_submission(int $userId, array $selected): array
 
     $attachments = [];
     foreach ($stmt->fetchAll() as $attachment) {
-        $path = attachment_absolute_path($attachment);
-        if (!$path || !is_file($path) || !is_readable($path)) {
+        $contents = attachment_binary_contents($attachment);
+        if ($contents === null) {
             continue;
         }
         $attachments[] = [
-            'path' => $path,
+            'content' => $contents,
             'name' => $attachment['file_name'],
             'type' => mime_type_for_attachment($attachment),
         ];
