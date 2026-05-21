@@ -23,53 +23,52 @@ import {
 const currency = new Intl.NumberFormat('de-AT', { style: 'currency', currency: 'EUR' });
 const ownContributionNotice = 'Dein Budget ist überschritten. Der Mehrbetrag wird als Eigenanteil ausgewiesen.';
 const budgetExceededMessage = 'Budget überschritten. Entferne zuerst einen Benefit, bevor du ein weiteres auswählst.';
-const benefitDetailImage = '/brand/benefit-detail-strip.png';
 
 const benefitDetails = {
   'Yoga-Kurs': {
-    imagePosition: '0% center',
+    image: '/brand/benefits/yoga-kurs.jpg',
     summary: 'Für regelmäßige Bewegung, mentale Entlastung und einen bewussten Ausgleich zum Arbeitsalltag.',
     highlights: ['Yoga-, Pilates- oder Achtsamkeitskurse', 'Präsenz- und Onlineangebote', 'Einzelkurse oder Kursblöcke'],
     receipt: 'Rechnung, Zahlungsbestätigung oder Teilnahmebestätigung des Anbieters.',
     hrNote: 'Achte darauf, dass Anbieter, Zeitraum und Betrag auf dem Nachweis gut lesbar sind.',
   },
   'Wiener Öffi-Ticket': {
-    imagePosition: '16.666% center',
+    image: '/brand/benefits/wiener-oeffi-ticket.jpg',
     summary: 'Unterstützt nachhaltige Mobilität für deinen Arbeitsweg und private Fahrten im öffentlichen Verkehr.',
     highlights: ['Jahreskarte oder Zeitkarten', 'Öffi-Abos und digitale Tickets', 'Monatliche Auszahlung über das Benefit-Jahr'],
     receipt: 'Ticketbeleg, Rechnung oder Screenshot aus der Ticket-App mit Name, Zeitraum und Betrag.',
     hrNote: 'Bei Abos ist ein Nachweis mit Laufzeit besonders hilfreich.',
   },
   'Fitness-Zuschuss': {
-    imagePosition: '33.333% center',
+    image: '/brand/benefits/fitness-zuschuss.jpg',
     summary: 'Für Fitnessstudio, Kurse und Trainingsangebote, die deine Gesundheit langfristig unterstützen.',
     highlights: ['Fitnessstudio-Mitgliedschaft', 'Sportkurse und Personal Training', 'Ausrüstung, wenn sie direkt zum Angebot gehört'],
     receipt: 'Rechnung oder Mitgliedschaftsbestätigung mit bezahltem Betrag und Leistungszeitraum.',
     hrNote: 'Der Nachweis sollte klar zeigen, dass es sich um ein Gesundheits- oder Fitnessangebot handelt.',
   },
   Weiterbildung: {
-    imagePosition: '50% center',
+    image: '/brand/benefits/weiterbildung.jpg',
     summary: 'Für berufliche Entwicklung, fachliche Vertiefung und Lernangebote, die dich im Job weiterbringen.',
     highlights: ['Seminare, Kurse und Zertifikate', 'Fachliteratur und Lernplattformen', 'Sprach- oder Softwaretrainings'],
     receipt: 'Rechnung, Kursbestätigung oder Buchungsbeleg mit Anbieter, Thema und Betrag.',
     hrNote: 'Eine kurze Beschreibung hilft HR, den beruflichen Bezug schneller zu prüfen.',
   },
   Gesundheitscheck: {
-    imagePosition: '66.666% center',
+    image: '/brand/benefits/gesundheitscheck.jpg',
     summary: 'Für Vorsorge, Beratung und anerkannte Gesundheitsleistungen, die präventiv wirken.',
     highlights: ['Vorsorgeuntersuchungen', 'Beratung und Diagnostik', 'Anerkannte Gesundheitsleistungen'],
     receipt: 'Honorarnote, Rechnung oder Bestätigung der Einrichtung mit Leistungsdatum und Betrag.',
     hrNote: 'Medizinische Details müssen nicht ausführlich offengelegt werden; relevant sind Leistung, Datum und Betrag.',
   },
   'Homeoffice-Ausstattung': {
-    imagePosition: '83.333% center',
+    image: '/brand/benefits/homeoffice-ausstattung.jpg',
     summary: 'Für eine ergonomische, ruhige und produktive Arbeitsumgebung zuhause.',
     highlights: ['Ergonomischer Stuhl oder Tisch', 'Monitor, Tastatur, Maus oder Beleuchtung', 'Arbeitsmittel für den Homeoffice-Platz'],
     receipt: 'Kaufbeleg oder Rechnung mit Artikelbezeichnung und Betrag.',
     hrNote: 'Bitte lade den vollständigen Beleg hoch, damit Artikel und Preis nachvollziehbar sind.',
   },
   'Essens-/Verpflegungszuschuss': {
-    imagePosition: '100% center',
+    image: '/brand/benefits/essens-verpflegungszuschuss.jpg',
     summary: 'Unterstützt regelmäßige Mahlzeiten und gesunde Ernährung im Arbeitsalltag.',
     highlights: ['Essenszuschüsse und Verpflegung', 'Gesunde Mahlzeiten im Arbeitskontext', 'Monatliche Auszahlung über das Benefit-Jahr'],
     receipt: 'Belege, Abrechnungen oder Nachweise des jeweiligen Angebots.',
@@ -112,19 +111,11 @@ function formatEuroInput(value) {
 
 function detailForBenefit(benefit) {
   return benefitDetails[benefit.title] || {
-    imagePosition: '50% center',
+    image: '/brand/benefits/weiterbildung.jpg',
     summary: benefit.description || 'Zusätzliche Informationen zu diesem Benefit.',
     highlights: ['Betrag und Zweck prüfen', 'Passende Nachweise sammeln', 'Bei Fragen HR kontaktieren'],
     receipt: benefit.receiptRequired ? 'Bitte lade einen passenden Zahlungs- oder Leistungsnachweis hoch.' : 'Für diesen Benefit ist aktuell kein Nachweis erforderlich.',
     hrNote: 'Die Prüfung erfolgt anhand deiner Angaben und der hinterlegten Unterlagen.',
-  };
-}
-
-function benefitImageStyle(detail) {
-  return {
-    backgroundImage: `url(${benefitDetailImage})`,
-    backgroundPosition: detail.imagePosition,
-    backgroundSize: '700% 100%',
   };
 }
 
@@ -562,50 +553,58 @@ const BenefitSelectionPage = () => {
                               <Info className="h-4 w-4" />
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-h-[90vh] overflow-y-auto p-0 sm:max-w-3xl">
-                            <div className="h-56 rounded-t-lg bg-cover bg-center sm:h-72" style={benefitImageStyle(detail)} />
-                            <div className="p-6">
-                              <DialogHeader>
-                                <DialogTitle className="text-2xl">{benefit.title}</DialogTitle>
-                                <DialogDescription>{detail.summary}</DialogDescription>
-                              </DialogHeader>
+                          <DialogContent className="max-h-[90vh] overflow-hidden p-0 sm:max-w-4xl">
+                            <div className="grid max-h-[90vh] overflow-y-auto sm:grid-cols-[18rem_minmax(0,1fr)] lg:grid-cols-[21rem_minmax(0,1fr)]">
+                              <div className="h-72 overflow-hidden bg-muted sm:h-auto sm:min-h-[38rem]">
+                                <img
+                                  src={detail.image}
+                                  alt={`Motiv zu ${benefit.title}`}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                              <div className="p-6">
+                                <DialogHeader>
+                                  <DialogTitle className="text-2xl">{benefit.title}</DialogTitle>
+                                  <DialogDescription>{detail.summary}</DialogDescription>
+                                </DialogHeader>
 
-                              <div className="mt-6 grid gap-4 md:grid-cols-[1fr_16rem]">
-                                <div className="space-y-4">
-                                  <div>
-                                    <p className="mb-2 text-sm font-semibold uppercase text-[#C0A468]">Wofür gedacht</p>
-                                    <ul className="space-y-2 text-sm text-muted-foreground">
-                                      {detail.highlights.map((item) => (
-                                        <li key={item} className="flex gap-2">
-                                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#719C6F]" />
-                                          <span>{item}</span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                  <div className="rounded-lg border border-border bg-muted/30 p-4">
-                                    <p className="text-sm font-semibold">Nachweis</p>
-                                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{detail.receipt}</p>
-                                  </div>
-                                  <div className="rounded-lg border border-[#C0A468]/25 bg-[#C0A468]/10 p-4">
-                                    <p className="text-sm font-semibold text-[#8B7138] dark:text-[#EDD38E]">Gut zu wissen</p>
-                                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{detail.hrNote}</p>
-                                  </div>
-                                </div>
-
-                                <div className="rounded-lg border border-border bg-card p-4">
-                                  <p className="text-sm text-muted-foreground">Benefit-Wert</p>
-                                  <p className="mt-1 text-2xl font-bold text-[#C0A468]">{currency.format(benefit.fixedAmount)}</p>
-                                  <p className="mt-1 text-xs text-muted-foreground">{payoutLabel(benefit.payoutMode)}</p>
-                                  <div className="mt-4 rounded-md bg-muted/40 p-3 text-sm">
-                                    <p className="font-medium">{benefit.category}</p>
-                                    <p className="mt-1 text-muted-foreground">{benefit.receiptRequired ? 'Nachweis erforderlich' : 'Kein Nachweis erforderlich'}</p>
-                                  </div>
-                                  {selected && (
-                                    <div className="mt-4 rounded-md bg-[#719C6F]/10 p-3 text-sm font-medium text-[#315B30] dark:text-[#A9D0A6]">
-                                      Bereits ausgewählt
+                                <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_16rem]">
+                                  <div className="space-y-4">
+                                    <div>
+                                      <p className="mb-2 text-sm font-semibold uppercase text-[#C0A468]">Wofür gedacht</p>
+                                      <ul className="space-y-2 text-sm text-muted-foreground">
+                                        {detail.highlights.map((item) => (
+                                          <li key={item} className="flex gap-2">
+                                            <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#719C6F]" />
+                                            <span>{item}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
                                     </div>
-                                  )}
+                                    <div className="rounded-lg border border-border bg-muted/30 p-4">
+                                      <p className="text-sm font-semibold">Nachweis</p>
+                                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{detail.receipt}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-[#C0A468]/25 bg-[#C0A468]/10 p-4">
+                                      <p className="text-sm font-semibold text-[#8B7138] dark:text-[#EDD38E]">Gut zu wissen</p>
+                                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{detail.hrNote}</p>
+                                    </div>
+                                  </div>
+
+                                  <div className="rounded-lg border border-border bg-card p-4">
+                                    <p className="text-sm text-muted-foreground">Benefit-Wert</p>
+                                    <p className="mt-1 text-2xl font-bold text-[#C0A468]">{currency.format(benefit.fixedAmount)}</p>
+                                    <p className="mt-1 text-xs text-muted-foreground">{payoutLabel(benefit.payoutMode)}</p>
+                                    <div className="mt-4 rounded-md bg-muted/40 p-3 text-sm">
+                                      <p className="font-medium">{benefit.category}</p>
+                                      <p className="mt-1 text-muted-foreground">{benefit.receiptRequired ? 'Nachweis erforderlich' : 'Kein Nachweis erforderlich'}</p>
+                                    </div>
+                                    {selected && (
+                                      <div className="mt-4 rounded-md bg-[#719C6F]/10 p-3 text-sm font-medium text-[#315B30] dark:text-[#A9D0A6]">
+                                        Bereits ausgewählt
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
