@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v30';
+const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v31';
 const LOGIN_EMAIL_ERROR_MESSAGE = 'Bitte verwende deine @eduscho.at-Adresse oder eine freigegebene E-Mail-Adresse.';
 const FIRST_BENEFIT_YEAR = 2027;
 const FIRST_SELECTION_OPEN_DATE = '2026-05-21';
@@ -1747,13 +1747,14 @@ function activation_email(array $user, string $token): array
     $html = "
         <div style=\"font-family:Arial,sans-serif;color:#222222;line-height:1.6;max-width:620px;\">
             <p>Hallo {$name},</p>
-            <p>hier ist dein Aktivierungslink für die Tchibo Benefitbar, über den du dein Passwort setzen kannst.</p>
-            <p style=\"margin:24px 0;\">
-                <a href=\"{$linkHtml}\" style=\"display:inline-block;background:#C0A468;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:8px;\">Passwort setzen</a>
+            <p>hier ist dein Aktivierungslink fuer die Tchibo Benefitbar. Bitte oeffne diesen Link, um dein Passwort zu setzen:</p>
+            <p style=\"margin:18px 0;padding:14px;border:1px solid #D8C894;background:#F7F2E8;border-radius:8px;word-break:break-all;\">
+                <a href=\"{$linkHtml}\" style=\"color:#8B7138;text-decoration:underline;font-weight:bold;\">{$linkHtml}</a>
             </p>
-            <p>Dieser Link ist nur 24 Stunden gültig.</p>
+            <p>Falls der Link in deinem E-Mail-Programm nicht anklickbar ist, kopiere ihn bitte vollstaendig in die Adresszeile deines Browsers.</p>
+            <p>Dieser Link ist nur 24 Stunden gueltig.</p>
             <p>Falls du diesen Link nicht angefordert hast, kannst du diese E-Mail ignorieren.</p>
-            <p>Mit freundlichen Grüßen<br>dein Benefitbar-Team</p>
+            <p>Mit freundlichen Gruessen<br>dein Benefitbar-Team</p>
         </div>
     ";
     return send_email($user['email'], 'Aktivierungslink für die Tchibo Benefitbar', $html, 'activation_email', (int)$user['id']);
@@ -1763,7 +1764,18 @@ function reset_email(array $user, string $token): array
 {
     $link = rtrim(config_value('FRONTEND_URL'), '/') . '/reset-password?token=' . urlencode($token);
     $name = htmlspecialchars($user['first_name'] ?: $user['email'], ENT_QUOTES, 'UTF-8');
-    $html = "<p>Hallo {$name},</p><p>du hast eine Anfrage zum Zurücksetzen deines Passworts gestellt.</p><p><a href=\"{$link}\">Passwort zurücksetzen</a></p><p>Der Link ist 24 Stunden gültig.</p>";
+    $linkHtml = htmlspecialchars($link, ENT_QUOTES, 'UTF-8');
+    $html = "
+        <div style=\"font-family:Arial,sans-serif;color:#222222;line-height:1.6;max-width:620px;\">
+            <p>Hallo {$name},</p>
+            <p>du hast eine Anfrage zum Zuruecksetzen deines Passworts gestellt. Bitte oeffne dafuer diesen Link:</p>
+            <p style=\"margin:18px 0;padding:14px;border:1px solid #D8C894;background:#F7F2E8;border-radius:8px;word-break:break-all;\">
+                <a href=\"{$linkHtml}\" style=\"color:#8B7138;text-decoration:underline;font-weight:bold;\">{$linkHtml}</a>
+            </p>
+            <p>Falls der Link in deinem E-Mail-Programm nicht anklickbar ist, kopiere ihn bitte vollstaendig in die Adresszeile deines Browsers.</p>
+            <p>Der Link ist 24 Stunden gueltig.</p>
+        </div>
+    ";
     return send_email($user['email'], 'Tchibo Benefitbar - Passwort zurücksetzen', $html, 'password_reset_email', (int)$user['id']);
 }
 
