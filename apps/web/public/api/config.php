@@ -116,7 +116,7 @@ function benefitbar_config(): array
         'BOOTSTRAP_ADMIN_EMAIL' => getenv('BOOTSTRAP_ADMIN_EMAIL') ?: '',
         'BOOTSTRAP_ADMIN_PASSWORD' => getenv('BOOTSTRAP_ADMIN_PASSWORD') ?: '',
         'BOOTSTRAP_ADMIN_FIRST_NAME' => getenv('BOOTSTRAP_ADMIN_FIRST_NAME') ?: 'Admin',
-        'BOOTSTRAP_ADMIN_LAST_NAME' => getenv('BOOTSTRAP_ADMIN_LAST_NAME') ?: 'Benefit-Bar',
+        'BOOTSTRAP_ADMIN_LAST_NAME' => getenv('BOOTSTRAP_ADMIN_LAST_NAME') ?: 'Benefitbar',
         'SMTP_HOST' => getenv('SMTP_HOST') ?: '',
         'SMTP_PORT' => getenv('SMTP_PORT') ?: '',
         'SMTP_USER' => getenv('SMTP_USER') ?: '',

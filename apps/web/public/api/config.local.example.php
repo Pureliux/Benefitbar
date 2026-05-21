@@ -14,7 +14,7 @@ return [
     'BOOTSTRAP_ADMIN_EMAIL' => 'admin@eduscho.at',
     'BOOTSTRAP_ADMIN_PASSWORD' => 'CHANGE_ME_STRONG_PASSWORD',
     'BOOTSTRAP_ADMIN_FIRST_NAME' => 'Admin',
-    'BOOTSTRAP_ADMIN_LAST_NAME' => 'Benefit-Bar',
+    'BOOTSTRAP_ADMIN_LAST_NAME' => 'Benefitbar',
 
     'SMTP_HOST' => 'smtp.hostinger.com',
     'SMTP_PORT' => '465',

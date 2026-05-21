@@ -110,7 +110,7 @@ const BenefitSelectionPage = () => {
     }
 
     if ((overview?.window?.canEdit ?? true) === false) {
-      toast.error(overview?.window?.notice || 'Die Auswahl ist aktuell nicht geöffnet.');
+      toast.error(overview?.window?.notice || 'Die Auswahl ist aktuell nicht aktiv.');
       return;
     }
 
@@ -292,7 +292,7 @@ const BenefitSelectionPage = () => {
   return (
     <>
       <Helmet>
-        <title>Benefits auswählen - Tchibo BenefitBar</title>
+        <title>Benefits auswählen - Tchibo Benefitbar</title>
         <meta name="description" content="Benefits auswählen" />
       </Helmet>
 

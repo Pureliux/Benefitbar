@@ -237,7 +237,7 @@ const AdminDashboard = () => {
   return (
     <>
       <Helmet>
-        <title>Admin-Bereich - Tchibo BenefitBar</title>
+        <title>Admin-Bereich - Tchibo Benefitbar</title>
       </Helmet>
 
       <Header />

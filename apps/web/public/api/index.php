@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v25';
+const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v26';
 const LOGIN_EMAIL_ERROR_MESSAGE = 'Bitte verwende deine @eduscho.at-Adresse oder eine freigegebene E-Mail-Adresse.';
+const FIRST_BENEFIT_YEAR = 2027;
+const FIRST_SELECTION_OPEN_DATE = '2026-05-21';
 
 header('X-Content-Type-Options: nosniff');
 
@@ -396,9 +398,12 @@ function active_process_benefit_year_number(): int
 function benefit_year_schedule(int $benefitYear): array
 {
     $processYear = $benefitYear - 1;
+    $processOpenDate = $benefitYear === FIRST_BENEFIT_YEAR
+        ? FIRST_SELECTION_OPEN_DATE
+        : sprintf('%d-08-01', $processYear);
 
     return [
-        'process_open_date' => sprintf('%d-08-01', $processYear),
+        'process_open_date' => $processOpenDate,
         'submission_deadline' => sprintf('%d-10-31 23:59:00', $processYear),
         'reminder_date' => sprintf('%d-10-24', $processYear),
         'review_deadline' => sprintf('%d-12-31 23:59:00', $processYear),
@@ -427,6 +432,7 @@ function ensure_benefit_year_record(PDO $pdo, int $year): int
     $now = now_sql();
 
     if ($benefitYear) {
+        $processOpenSql = $year === FIRST_BENEFIT_YEAR ? '?' : 'COALESCE(process_open_date, ?)';
         $nextStatus = (string)($benefitYear['status'] ?? 'open');
         if ($nextStatus === 'archived' && $year >= 2027) {
             $nextStatus = 'open';
@@ -434,7 +440,7 @@ function ensure_benefit_year_record(PDO $pdo, int $year): int
 
         $pdo->prepare("
             UPDATE bb_benefit_years
-            SET process_open_date = COALESCE(process_open_date, ?),
+            SET process_open_date = {$processOpenSql},
                 submission_deadline = COALESCE(submission_deadline, ?),
                 reminder_date = COALESCE(reminder_date, ?),
                 review_deadline = COALESCE(review_deadline, ?),
@@ -731,7 +737,7 @@ function bootstrap_admin(): void
             $updates['first_name'] = config_value('BOOTSTRAP_ADMIN_FIRST_NAME', 'Admin');
         }
         if (trim((string)$existing['last_name']) === '') {
-            $updates['last_name'] = config_value('BOOTSTRAP_ADMIN_LAST_NAME', 'Benefit-Bar');
+            $updates['last_name'] = config_value('BOOTSTRAP_ADMIN_LAST_NAME', 'Benefitbar');
         }
 
         $assignments = [];
@@ -756,7 +762,7 @@ function bootstrap_admin(): void
     $stmt->execute([
         $email,
         config_value('BOOTSTRAP_ADMIN_FIRST_NAME', 'Admin'),
-        config_value('BOOTSTRAP_ADMIN_LAST_NAME', 'Benefit-Bar'),
+        config_value('BOOTSTRAP_ADMIN_LAST_NAME', 'Benefitbar'),
         password_hash($password, PASSWORD_DEFAULT),
         $now,
         $now,
@@ -1089,6 +1095,10 @@ function benefit_year_window_info(array $year, array $submission): array
     $reviewDeadline = utc_datetime($year['review_deadline'] ?: $schedule['review_deadline']);
     $now = utc_datetime(gmdate('Y-m-d H:i:s'));
     $status = (string)($submission['status'] ?? 'draft');
+    $benefitYearNumber = (int)$year['year'];
+    $submissionDeadlineText = format_date_de($submissionDeadline->format('Y-m-d H:i:s'));
+    $reviewDeadlineText = format_date_de($reviewDeadline->format('Y-m-d H:i:s'));
+    $processOpenText = format_date_de($processOpen->format('Y-m-d'));
 
     $beforeOpen = $now < $processOpen;
     $selectionOpen = $now >= $processOpen && $now <= $submissionDeadline;
@@ -1099,23 +1109,30 @@ function benefit_year_window_info(array $year, array $submission): array
     $canEdit = ($selectionOpen && in_array($status, $editableStatuses, true))
         || ($reviewOpen && in_array($status, $revisionStatuses, true));
 
-    if ($beforeOpen) {
+    if ($status === 'approved') {
+        $phase = 'approved';
+        $notice = 'Genehmigt: Deine Benefits für das Benefit-Jahr ' . $benefitYearNumber . ' sind bestätigt und bleiben hier sichtbar.';
+    } elseif ($status === 'submitted') {
+        $phase = $selectionOpen ? 'submitted' : ($reviewOpen ? 'review' : 'closed');
+        $notice = 'Deine Einreichung liegt bei HR. Aktuell wird geprüft, ob alles passt; du musst im Moment nichts weiter tun.';
+    } elseif (in_array($status, $revisionStatuses, true) && ($selectionOpen || $reviewOpen)) {
+        $phase = $status;
+        $notice = 'HR hat eine Rückmeldung hinterlegt. Bitte bearbeite deine Auswahl bis zum ' . ($reviewOpen ? $reviewDeadlineText : $submissionDeadlineText) . ' und reiche sie erneut ein.';
+    } elseif ($beforeOpen) {
         $phase = 'before_open';
-        $notice = 'Das Benefit-Jahr ' . (int)$year['year'] . ' öffnet am ' . format_date_de($processOpen->format('Y-m-d')) . '.';
+        $notice = 'Die nächste Benefit-Auswahl ist vorbereitet. Ab dem ' . $processOpenText . ' kannst du hier deine Benefits für das Benefit-Jahr ' . $benefitYearNumber . ' auswählen.';
     } elseif ($urgent) {
         $phase = 'urgent';
-        $notice = 'Dringend: Du hast bis ' . format_date_de($submissionDeadline->format('Y-m-d H:i:s')) . ' Zeit, deine Einreichung abzuschließen.';
+        $notice = 'Letzte Woche: Du hast bis zum ' . $submissionDeadlineText . ' Zeit, deine Benefits für das nächste Jahr auszuwählen und final einzureichen.';
     } elseif ($selectionOpen) {
         $phase = 'selection_open';
-        $notice = 'Du hast bis ' . format_date_de($submissionDeadline->format('Y-m-d H:i:s')) . ' Zeit, deine Einreichung abzuschließen.';
+        $notice = 'Du hast bis zum ' . $submissionDeadlineText . ' Zeit, deine Benefits für das nächste Jahr auszuwählen und final einzureichen.';
     } elseif ($reviewOpen) {
         $phase = 'review';
-        $notice = in_array($status, $revisionStatuses, true)
-            ? 'Bitte bearbeite die Rückmeldung bis ' . format_date_de($reviewDeadline->format('Y-m-d H:i:s')) . ' und reiche erneut ein.'
-            : 'Die Auswahlfrist ist vorbei. HR bearbeitet die Einreichungen bis ' . format_date_de($reviewDeadline->format('Y-m-d H:i:s')) . '.';
+        $notice = 'Die Auswahlfrist ist vorbei. HR prüft die Einreichungen bis zum ' . $reviewDeadlineText . '; falls eine Rückfrage kommt, kannst du hier nachbessern.';
     } else {
         $phase = 'closed';
-        $notice = 'Die Auswahl für das Benefit-Jahr ' . (int)$year['year'] . ' ist abgeschlossen.';
+        $notice = 'Die Auswahl für das Benefit-Jahr ' . $benefitYearNumber . ' ist abgeschlossen. Genehmigte Benefits bleiben hier sichtbar.';
     }
 
     return [
@@ -1712,7 +1729,7 @@ function activation_email(array $user, string $token): array
     $html = "
         <div style=\"font-family:Arial,sans-serif;color:#222222;line-height:1.6;max-width:620px;\">
             <p>Hallo {$name},</p>
-            <p>hier ist dein Aktivierungslink für die Tchibo Benefit Bar, über den du dein Passwort setzen kannst.</p>
+            <p>hier ist dein Aktivierungslink für die Tchibo Benefitbar, über den du dein Passwort setzen kannst.</p>
             <p style=\"margin:24px 0;\">
                 <a href=\"{$linkHtml}\" style=\"display:inline-block;background:#C0A468;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:8px;\">Passwort setzen</a>
             </p>
@@ -1721,7 +1738,7 @@ function activation_email(array $user, string $token): array
             <p>Mit freundlichen Grüßen<br>dein Benefitbar-Team</p>
         </div>
     ";
-    return send_email($user['email'], 'Aktivierungslink für die Tchibo Benefit Bar', $html, 'activation_email', (int)$user['id']);
+    return send_email($user['email'], 'Aktivierungslink für die Tchibo Benefitbar', $html, 'activation_email', (int)$user['id']);
 }
 
 function reset_email(array $user, string $token): array
@@ -1729,7 +1746,7 @@ function reset_email(array $user, string $token): array
     $link = rtrim(config_value('FRONTEND_URL'), '/') . '/reset-password?token=' . urlencode($token);
     $name = htmlspecialchars($user['first_name'] ?: $user['email'], ENT_QUOTES, 'UTF-8');
     $html = "<p>Hallo {$name},</p><p>du hast eine Anfrage zum Zurücksetzen deines Passworts gestellt.</p><p><a href=\"{$link}\">Passwort zurücksetzen</a></p><p>Der Link ist 24 Stunden gültig.</p>";
-    return send_email($user['email'], 'Tchibo Benefit-Bar - Passwort zurücksetzen', $html, 'password_reset_email', (int)$user['id']);
+    return send_email($user['email'], 'Tchibo Benefitbar - Passwort zurücksetzen', $html, 'password_reset_email', (int)$user['id']);
 }
 
 function token_hash(string $token): string
@@ -2361,7 +2378,7 @@ function send_submission_notifications(array $user, array $year, array $submissi
         ? '<p><strong>Anhänge:</strong> ' . count($attachments) . ' Datei(en) wurden dieser E-Mail beigefügt.</p>'
         : '<p><strong>Anhänge:</strong> Keine Nachweise beigefügt.</p>';
 
-    $html = '<p>Eine Benefit-Bar Einreichung wurde final eingereicht.</p>'
+    $html = '<p>Eine Benefitbar Einreichung wurde final eingereicht.</p>'
         . '<p><strong>User:</strong> ' . htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8') . '</p>'
         . '<p><strong>Benefit-Jahr:</strong> ' . (int)$year['year'] . '</p>'
         . '<ul>' . $rows . '</ul>'
@@ -2370,11 +2387,11 @@ function send_submission_notifications(array $user, array $year, array $submissi
         . '<strong>Eigenanteil:</strong> ' . number_format((float)$submission['employee_own_contribution_amount'], 2, ',', '.') . ' EUR</p>'
         . $attachmentList;
 
-    $hrResult = send_email(config_value('HR_NOTIFICATION_EMAIL', 'prozessmanagement@eduscho.at'), 'Benefit-Bar Einreichung', $html, 'submission_notification', (int)$user['id'], $attachments);
+    $hrResult = send_email(config_value('HR_NOTIFICATION_EMAIL', 'prozessmanagement@eduscho.at'), 'Benefitbar Einreichung', $html, 'submission_notification', (int)$user['id'], $attachments);
     if (!$hrResult['success']) {
         return $hrResult;
     }
-    $userResult = send_email($user['email'], 'Tchibo Benefit-Bar - Einreichung erhalten', '<p>Deine Einreichung wurde erfolgreich übermittelt und wird geprüft.</p>', 'user_confirmation', (int)$user['id']);
+    $userResult = send_email($user['email'], 'Tchibo Benefitbar - Einreichung erhalten', '<p>Deine Einreichung wurde erfolgreich übermittelt und wird geprüft.</p>', 'user_confirmation', (int)$user['id']);
     return $userResult['success'] ? ['success' => true] : $userResult;
 }
 
@@ -2818,8 +2835,8 @@ function handle_admin_send_test_email(): void
 
     $result = send_email(
         $email,
-        'Tchibo Benefit-Bar - Test-E-Mail',
-        '<p>Dies ist eine Test-E-Mail der Tchibo Benefit-Bar.</p><p>Wenn du diese E-Mail erhalten hast, funktioniert die SMTP-Konfiguration.</p>',
+        'Tchibo Benefitbar - Test-E-Mail',
+        '<p>Dies ist eine Test-E-Mail der Tchibo Benefitbar.</p><p>Wenn du diese E-Mail erhalten hast, funktioniert die SMTP-Konfiguration.</p>',
         'test_email'
     );
 

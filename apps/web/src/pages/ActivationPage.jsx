@@ -92,7 +92,7 @@ const ActivationPage = () => {
   return (
     <>
       <Helmet>
-        <title>Account aktivieren - Tchibo BenefitBar</title>
+        <title>Account aktivieren - Tchibo Benefitbar</title>
       </Helmet>
 
       <Header />

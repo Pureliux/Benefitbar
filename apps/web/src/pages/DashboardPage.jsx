@@ -96,8 +96,8 @@ const DashboardPage = () => {
   return (
     <>
       <Helmet>
-        <title>Übersicht - Tchibo BenefitBar</title>
-        <meta name="description" content="Deine Benefit-Bar Übersicht" />
+        <title>Übersicht - Tchibo Benefitbar</title>
+        <meta name="description" content="Deine Benefitbar Übersicht" />
       </Helmet>
 
       <Header />

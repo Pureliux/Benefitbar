@@ -52,6 +52,45 @@ function employeeName(employee) {
   return name || employee?.email || 'Unbekannt';
 }
 
+function itemName(item) {
+  return item?.isCustomBenefit ? item.customTitle : item?.benefit?.title;
+}
+
+function employeeFeedbackInfo(submission) {
+  if (!submission) return null;
+  const reason = submission.needsInfoReason || submission.adminComment;
+
+  const map = {
+    draft: {
+      title: 'Mitarbeiteransicht',
+      text: 'Der Mitarbeitende sieht aktuell einen bearbeitbaren Entwurf.',
+      className: 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200',
+    },
+    submitted: {
+      title: 'Mitarbeiteransicht',
+      text: 'Der Mitarbeitende sieht aktuell: HR prüft deine Einreichung, du musst im Moment nichts tun.',
+      className: 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-100',
+    },
+    needs_info: {
+      title: 'Mitarbeiteransicht',
+      text: `Der Mitarbeitende sieht aktuell: Unterlagen fehlen${reason ? ` - ${reason}` : ''}.`,
+      className: 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-100',
+    },
+    approved: {
+      title: 'Mitarbeiteransicht',
+      text: 'Der Mitarbeitende sieht aktuell: Genehmigt, die Benefits sind bestätigt.',
+      className: 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-100',
+    },
+    rejected: {
+      title: 'Mitarbeiteransicht',
+      text: `Der Mitarbeitende sieht aktuell: Abgelehnt${reason ? ` - ${reason}` : ''}.`,
+      className: 'border-red-200 bg-red-50 text-red-800 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-100',
+    },
+  };
+
+  return map[submission.status] || map.draft;
+}
+
 const HrDashboard = () => {
   const [submissions, setSubmissions] = useState([]);
   const [years, setYears] = useState([]);
@@ -66,6 +105,7 @@ const HrDashboard = () => {
   const [reviewNotes, setReviewNotes] = useState({});
   const [decisionReason, setDecisionReason] = useState('');
   const [savingAction, setSavingAction] = useState(null);
+  const [lastAction, setLastAction] = useState(null);
 
   const loadSubmissions = async () => {
     setLoadingList(true);
@@ -143,6 +183,7 @@ const HrDashboard = () => {
   const allChecked = detail?.selectedBenefits?.length
     ? detail.selectedBenefits.every((item) => item.hrReviewStatus === 'checked')
     : false;
+  const employeeFeedback = employeeFeedbackInfo(detail);
 
   const attachmentUrl = (attachment) => {
     const params = new URLSearchParams({ id: attachment.id });
@@ -157,6 +198,8 @@ const HrDashboard = () => {
   };
 
   const reviewBenefit = async (selectedBenefitId, nextStatus) => {
+    const reviewedItem = detail?.selectedBenefits?.find((item) => item.id === selectedBenefitId);
+    const statusLabel = reviewStatuses[nextStatus]?.label || nextStatus;
     setSavingAction(`${selectedBenefitId}-${nextStatus}`);
     try {
       const res = await apiServerClient.fetch('/hr/selected-benefit/review', {
@@ -172,7 +215,17 @@ const HrDashboard = () => {
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Prüfstatus konnte nicht gespeichert werden.');
       }
-      toast.success('Prüfstatus gespeichert.');
+      const actionText = `${itemName(reviewedItem) || 'Benefit'} steht jetzt auf "${statusLabel}".`;
+      setLastAction({
+        title: 'Prüfstatus gespeichert',
+        text: actionText,
+        className: nextStatus === 'rejected'
+          ? 'border-red-200 bg-red-50 text-red-800'
+          : nextStatus === 'needs_info'
+            ? 'border-amber-200 bg-amber-50 text-amber-900'
+            : 'border-emerald-200 bg-emerald-50 text-emerald-800',
+      });
+      toast.success('Prüfstatus gespeichert.', { description: actionText });
       await refreshCurrent();
     } catch (error) {
       toast.error(error.message || 'Prüfstatus konnte nicht gespeichert werden.');
@@ -202,7 +255,26 @@ const HrDashboard = () => {
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Entscheidung konnte nicht gespeichert werden.');
       }
-      toast.success(data.message || 'Entscheidung gespeichert.');
+      const actionByDecision = {
+        approved: {
+          title: 'Einreichung genehmigt',
+          text: `${employeeName(detail?.employee)} sieht jetzt, dass die Benefits genehmigt sind.`,
+          className: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+        },
+        needs_info: {
+          title: 'Unterlagen angefordert',
+          text: `${employeeName(detail?.employee)} sieht jetzt deine Rückfrage und kann nachbessern.`,
+          className: 'border-amber-200 bg-amber-50 text-amber-900',
+        },
+        rejected: {
+          title: 'Einreichung abgelehnt',
+          text: `${employeeName(detail?.employee)} sieht jetzt die Ablehnung mit Begründung.`,
+          className: 'border-red-200 bg-red-50 text-red-800',
+        },
+      };
+      const action = actionByDecision[decision];
+      setLastAction(action);
+      toast.success(action?.title || data.message || 'Entscheidung gespeichert.', { description: action?.text });
       await refreshCurrent();
     } catch (error) {
       toast.error(error.message || 'Entscheidung konnte nicht gespeichert werden.');
@@ -214,7 +286,7 @@ const HrDashboard = () => {
   return (
     <>
       <Helmet>
-        <title>HR-Bereich - Tchibo BenefitBar</title>
+        <title>HR-Bereich - Tchibo Benefitbar</title>
       </Helmet>
 
       <Header />
@@ -225,13 +297,25 @@ const HrDashboard = () => {
             <div>
               <p className="text-sm font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300">HR-Bereich</p>
               <h1 className="mt-1 text-3xl font-bold sm:text-4xl">Einreichungen prüfen</h1>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Queue, Nachweise, Checklist und Entscheidungen für BenefitBar.</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Queue, Nachweise, Checklist und Entscheidungen für Benefitbar.</p>
             </div>
             <Button onClick={refreshCurrent} variant="outline" className="border-blue-200 bg-white text-blue-800 hover:bg-blue-50 dark:bg-slate-900 dark:text-blue-200">
               <RefreshCw className="mr-2 h-4 w-4" />
               Aktualisieren
             </Button>
           </div>
+
+          {lastAction && (
+            <div className={`mb-6 rounded-lg border p-4 text-sm shadow-sm ${lastAction.className}`}>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="font-semibold">{lastAction.title}</p>
+                  <p className="mt-1 leading-relaxed">{lastAction.text}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <section className="mb-6 grid gap-3 rounded-lg border border-blue-100 bg-white p-4 shadow-sm dark:border-blue-900/40 dark:bg-slate-900 lg:grid-cols-[10rem_10rem_12rem_minmax(0,1fr)]">
             <Select value={queue} onValueChange={setQueue}>
@@ -350,6 +434,13 @@ const HrDashboard = () => {
                       </div>
                     </div>
                   </div>
+
+                  {employeeFeedback && (
+                    <div className={`rounded-lg border p-4 text-sm ${employeeFeedback.className}`}>
+                      <p className="font-semibold">{employeeFeedback.title}</p>
+                      <p className="mt-1 leading-relaxed">{employeeFeedback.text}</p>
+                    </div>
+                  )}
 
                   <div className="space-y-4">
                     {detail.selectedBenefits.map((item) => (

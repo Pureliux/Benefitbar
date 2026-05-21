@@ -5,7 +5,7 @@ import Header from '@/components/Header.jsx';
 
 const faqs = [
   {
-    question: 'Was ist die Benefit-Bar?',
+    question: 'Was ist die Benefitbar?',
     answer: 'Placeholder',
   },
   {
@@ -36,8 +36,8 @@ const HelpPage = () => {
   return (
     <>
       <Helmet>
-        <title>Hilfe & FAQ - Tchibo BenefitBar</title>
-        <meta name="description" content="Häufig gestellte Fragen zur Benefit-Bar" />
+        <title>Hilfe & FAQ - Tchibo Benefitbar</title>
+        <meta name="description" content="Häufig gestellte Fragen zur Benefitbar" />
       </Helmet>
 
       <Header />
@@ -47,7 +47,7 @@ const HelpPage = () => {
           <div className="mb-8">
             <p className="text-sm font-semibold uppercase text-[#C0A468]">Support</p>
             <h1 className="mt-1 text-3xl font-bold sm:text-4xl">Hilfe & FAQ</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Die wichtigsten Fragen zur Benefit-Bar kompakt beantwortet.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Die wichtigsten Fragen zur Benefitbar kompakt beantwortet.</p>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
@@ -87,7 +87,7 @@ const HelpPage = () => {
             <figure className="sticky top-24 hidden h-[33rem] overflow-hidden rounded-lg border border-[#D8C894]/80 bg-[#F7EAC3] p-3 shadow-xl lg:block dark:border-border dark:bg-[#20242A]">
               <img
                 src="/brand/superbean-help.png"
-                alt="Super Bean Maskottchen der Benefit-Bar"
+                alt="Super Bean Maskottchen der Benefitbar"
                 className="h-full w-full object-contain object-center opacity-95"
               />
             </figure>

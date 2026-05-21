@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, CheckCircle2, Clock3, ExternalLink, FileText, Send, Trash2, Upload } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock3, ExternalLink, FileCheck2, FileText, Send, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import apiServerClient, { API_SERVER_URL } from '@/lib/apiServerClient';
 import Header from '@/components/Header.jsx';
@@ -10,54 +10,100 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 const currency = new Intl.NumberFormat('de-AT', { style: 'currency', currency: 'EUR' });
 
-const statusSteps = [
-  { key: 'draft', label: 'Entwurf' },
-  { key: 'submitted', label: 'In Prüfung' },
-  { key: 'approved', label: 'Genehmigt' },
+const statusStages = [
+  {
+    key: 'selection',
+    title: 'Auswahl & Nachweise',
+    detail: 'Benefits auswählen, Beträge prüfen und Nachweise hochladen.',
+  },
+  {
+    key: 'review',
+    title: 'HR-Prüfung',
+    detail: 'HR prüft Nachweise, Beträge und mögliche Rückfragen.',
+  },
+  {
+    key: 'approval',
+    title: 'Freigabe',
+    detail: 'Nach der Freigabe bleiben deine Benefits im Jahr sichtbar.',
+  },
 ];
 
 const stepVisuals = {
   done: {
+    card: 'border-[#719C6F]/40 bg-[#719C6F]/10',
     circle: 'bg-[#719C6F] text-white',
     text: 'text-[#315B30] dark:text-[#A9D0A6]',
   },
   active: {
+    card: 'border-[#EDC948]/50 bg-[#EDC948]/15',
     circle: 'bg-[#EDC948] text-[#3B2F0D]',
     text: 'text-[#8B7138] dark:text-[#EDD38E]',
   },
   pending: {
+    card: 'border-border bg-muted/20',
     circle: 'bg-muted text-muted-foreground',
     text: 'text-muted-foreground',
   },
   error: {
+    card: 'border-[#EA5153]/40 bg-[#EA5153]/10',
     circle: 'bg-[#EA5153] text-white',
     text: 'text-[#EA5153]',
   },
 };
 
-function statusInfo(status) {
+function statusInfo(status, reason = '') {
   const map = {
-    draft: { label: 'Entwurf', tone: 'bg-[#EDC948]/20 text-[#8B7138]', text: 'Deine Auswahl ist in Bearbeitung und wurde noch nicht final eingereicht.' },
-    submitted: { label: 'In Prüfung', tone: 'bg-[#C0A468]/15 text-[#8B7138]', text: 'Deine Einreichung liegt bei HR/Prozessmanagement.' },
-    needs_info: { label: 'Unterlagen fehlen', tone: 'bg-[#EA5153]/15 text-[#EA5153]', text: 'Bitte lade die angeforderten Unterlagen nach.' },
-    approved: { label: 'Genehmigt', tone: 'bg-[#719C6F]/15 text-[#719C6F]', text: 'Deine Einreichung wurde genehmigt.' },
-    rejected: { label: 'Abgelehnt', tone: 'bg-[#EA5153]/15 text-[#EA5153]', text: 'Deine Einreichung wurde abgelehnt.' },
-    auto_assigned: { label: 'Automatisch zugewiesen', tone: 'bg-muted text-muted-foreground', text: 'Es wurde eine automatische Auswahl erstellt.' },
+    draft: {
+      label: 'In Bearbeitung',
+      tone: 'bg-[#EDC948]/20 text-[#8B7138]',
+      headline: 'Deine Auswahl ist noch offen.',
+      text: 'Wähle deine Benefits aus, ergänze Nachweise und reiche alles final ein.',
+    },
+    submitted: {
+      label: 'Bei HR',
+      tone: 'bg-[#C0A468]/15 text-[#8B7138]',
+      headline: 'HR prüft deine Einreichung.',
+      text: 'Du musst im Moment nichts tun. Sobald es eine Rückfrage oder Freigabe gibt, siehst du sie hier.',
+    },
+    needs_info: {
+      label: 'Nachbesserung',
+      tone: 'bg-[#EDC948]/20 text-[#8B7138]',
+      headline: 'HR braucht noch etwas von dir.',
+      text: reason ? `Rückmeldung: ${reason}` : 'Bitte ergänze die angeforderten Unterlagen und reiche erneut ein.',
+    },
+    approved: {
+      label: 'Genehmigt',
+      tone: 'bg-[#719C6F]/15 text-[#719C6F]',
+      headline: 'Alles erledigt.',
+      text: 'Deine Benefits sind genehmigt und bleiben hier für dich sichtbar.',
+    },
+    rejected: {
+      label: 'Abgelehnt',
+      tone: 'bg-[#EA5153]/15 text-[#EA5153]',
+      headline: 'Diese Einreichung wurde abgelehnt.',
+      text: reason ? `Begründung: ${reason}` : 'Bitte bearbeite deine Auswahl und reiche sie erneut ein.',
+    },
+    auto_assigned: {
+      label: 'Automatisch zugewiesen',
+      tone: 'bg-muted text-muted-foreground',
+      headline: 'Automatische Auswahl vorhanden.',
+      text: 'Es wurde eine automatische Auswahl erstellt.',
+    },
   };
   return map[status] || map.draft;
 }
 
-function statusStepState(status, stepKey) {
+function statusStageState(status, stageKey) {
   const stateByStatus = {
-    draft: { draft: 'active', submitted: 'pending', approved: 'pending' },
-    submitted: { draft: 'done', submitted: 'active', approved: 'pending' },
-    needs_info: { draft: 'done', submitted: 'active', approved: 'pending' },
-    approved: { draft: 'done', submitted: 'done', approved: 'done' },
-    rejected: { draft: 'done', submitted: 'error', approved: 'pending' },
-    auto_assigned: { draft: 'active', submitted: 'pending', approved: 'pending' },
+    draft: { selection: 'active', review: 'pending', approval: 'pending' },
+    submitted: { selection: 'done', review: 'active', approval: 'pending' },
+    needs_info: { selection: 'active', review: 'active', approval: 'pending' },
+    approved: { selection: 'done', review: 'done', approval: 'done' },
+    rejected: { selection: 'done', review: 'error', approval: 'pending' },
+    auto_assigned: { selection: 'active', review: 'pending', approval: 'pending' },
   };
 
-  return stateByStatus[status]?.[stepKey] || stateByStatus.draft[stepKey];
+  return stateByStatus[status]?.[stageKey] || stateByStatus.draft[stageKey];
 }
 
 function StepIcon({ state, index }) {
@@ -71,6 +117,18 @@ function StepIcon({ state, index }) {
     return <Clock3 className="h-5 w-5" />;
   }
   return index + 1;
+}
+
+function progressWidth(status) {
+  const map = {
+    draft: '18%',
+    auto_assigned: '18%',
+    submitted: '55%',
+    needs_info: '55%',
+    rejected: '55%',
+    approved: '100%',
+  };
+  return map[status] || map.draft;
 }
 
 const SubmissionPage = () => {
@@ -185,12 +243,12 @@ const SubmissionPage = () => {
   const windowInfo = overview?.window || {};
   const selectedBenefits = overview?.selectedBenefits || [];
   const attachments = overview?.attachments || [];
-  const status = statusInfo(submission?.status);
+  const rejectionReason = submission?.adminComment || submission?.needsInfoReason;
+  const status = statusInfo(submission?.status, rejectionReason);
   const statusEditable = submission && ['draft', 'needs_info', 'rejected'].includes(submission.status);
   const canEdit = Boolean(statusEditable && (windowInfo.canEdit ?? true));
   const canSubmit = Boolean(canEdit && (windowInfo.canSubmit ?? true));
   const isLocked = !canEdit;
-  const rejectionReason = submission?.adminComment || submission?.needsInfoReason;
 
   const attachmentsBySelectedId = useMemo(() => {
     const map = new Map();
@@ -217,8 +275,8 @@ const SubmissionPage = () => {
   return (
     <>
       <Helmet>
-        <title>Status - Tchibo BenefitBar</title>
-        <meta name="description" content="Status deiner Benefit-Bar Einreichung" />
+        <title>Status - Tchibo Benefitbar</title>
+        <meta name="description" content="Status deiner Benefitbar Einreichung" />
       </Helmet>
 
       <Header />
@@ -244,25 +302,49 @@ const SubmissionPage = () => {
             </div>
           )}
 
-          <section className="mb-8 rounded-lg border border-border bg-card p-6 shadow-sm">
-            <div className="grid gap-4 md:grid-cols-3">
-              {statusSteps.map((step, index) => {
-                const stepState = statusStepState(submission?.status, step.key);
+          <section className="mb-8 overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+            <div className="border-b border-border bg-[#23211D] p-6 text-white">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="max-w-3xl">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-[#EDD38E]">Benefit-Jahr {overview?.benefitYear?.year}</span>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${status.tone}`}>{status.label}</span>
+                  </div>
+                  <h2 className="text-2xl font-bold">{status.headline}</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-white/75">{status.text}</p>
+                </div>
+                <FileCheck2 className="hidden h-10 w-10 text-[#EDD38E] sm:block" />
+              </div>
+              <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/15">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    submission?.status === 'rejected' ? 'bg-[#EA5153]' : submission?.status === 'approved' ? 'bg-[#719C6F]' : 'bg-[#EDC948]'
+                  }`}
+                  style={{ width: progressWidth(submission?.status) }}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 p-4 md:grid-cols-3">
+              {statusStages.map((stage, index) => {
+                const stepState = statusStageState(submission?.status, stage.key);
                 const visual = stepVisuals[stepState];
                 return (
-                  <div key={step.key} className="flex items-center gap-3">
-                    <div className={`flex h-9 w-9 items-center justify-center rounded-full ${visual.circle}`}>
-                      <StepIcon state={stepState} index={index} />
+                  <div key={stage.key} className={`rounded-lg border p-4 ${visual.card}`}>
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${visual.circle}`}>
+                        <StepIcon state={stepState} index={index} />
+                      </div>
+                      <div>
+                        <p className={`font-semibold ${visual.text}`}>{stage.title}</p>
+                        <p className="text-xs text-muted-foreground">{stepState === 'done' ? 'Abgeschlossen' : stepState === 'active' ? 'Aktuell' : stepState === 'error' ? 'Rückmeldung' : 'Noch nicht dran'}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className={`font-semibold ${visual.text}`}>{step.label}</p>
-                      <p className="text-xs text-muted-foreground">{index === 0 ? 'Auswahl bearbeiten' : index === 1 ? 'HR prüft' : 'Abgeschlossen'}</p>
-                    </div>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{stage.detail}</p>
                   </div>
                 );
               })}
             </div>
-            <p className="mt-5 rounded-lg bg-muted/40 p-4 text-sm text-muted-foreground">{status.text}</p>
           </section>
 
           {submission?.status === 'rejected' && (

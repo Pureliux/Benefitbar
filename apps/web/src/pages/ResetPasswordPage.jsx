@@ -92,7 +92,7 @@ const ResetPasswordPage = () => {
   return (
     <>
       <Helmet>
-        <title>Passwort ändern - Tchibo BenefitBar</title>
+        <title>Passwort ändern - Tchibo Benefitbar</title>
       </Helmet>
 
       <Header />

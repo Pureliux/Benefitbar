@@ -43,7 +43,7 @@ const ForgotPasswordPage = () => {
   return (
     <>
       <Helmet>
-        <title>Passwort vergessen - Tchibo BenefitBar</title>
+        <title>Passwort vergessen - Tchibo Benefitbar</title>
       </Helmet>
 
       <Header />
