@@ -1,32 +1,30 @@
 import { Sector } from 'recharts';
 
-export const AVAILABLE_BUDGET_COLOR = '#E8E2D6';
+export const AVAILABLE_BUDGET_COLOR = '#E5E7EB';
 
 const chartCurrency = new Intl.NumberFormat('de-AT', { style: 'currency', currency: 'EUR' });
 
 const namedBenefitColors = new Map([
-  ['yoga-kurs', '#719C6F'],
-  ['wiener öffi-ticket', '#4F7CAC'],
-  ['fitness-zuschuss', '#E7C84B'],
-  ['weiterbildung', '#D978A0'],
-  ['gesundheitscheck', '#8C6BB1'],
-  ['homeoffice-ausstattung', '#4F9A94'],
-  ['essens-/verpflegungszuschuss', '#E06F6A'],
+  ['yoga-kurs', '#59A14F'],
+  ['wiener öffi-ticket', '#4E79A7'],
+  ['fitness-zuschuss', '#F28E2B'],
+  ['weiterbildung', '#B07AA1'],
+  ['gesundheitscheck', '#E15759'],
+  ['homeoffice-ausstattung', '#76B7B2'],
+  ['essens-/verpflegungszuschuss', '#EDC948'],
 ]);
 
 const fallbackBenefitColors = [
-  '#719C6F',
-  '#4F7CAC',
-  '#E7C84B',
-  '#D978A0',
-  '#8C6BB1',
-  '#4F9A94',
-  '#E06F6A',
-  '#6B88D6',
-  '#96A85B',
-  '#C86F8F',
-  '#78A6B8',
-  '#B884C7',
+  '#4E79A7',
+  '#F28E2B',
+  '#E15759',
+  '#76B7B2',
+  '#59A14F',
+  '#EDC948',
+  '#B07AA1',
+  '#FF9DA7',
+  '#9C755F',
+  '#BAB0AC',
 ];
 
 const RADIAN = Math.PI / 180;

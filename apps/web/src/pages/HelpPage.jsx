@@ -36,7 +36,7 @@ const HelpPage = () => {
   return (
     <>
       <Helmet>
-        <title>Hilfe & FAQ - Tchibo Benefit-Bar</title>
+        <title>Hilfe & FAQ - Tchibo BenefitBar</title>
         <meta name="description" content="Häufig gestellte Fragen zur Benefit-Bar" />
       </Helmet>
 

@@ -230,6 +230,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const isAdmin = Boolean(employee?.isAdmin || currentUser?.isAdmin);
+  const isHr = Boolean(employee?.isHr || currentUser?.isHr);
   const isEligible = employee?.eligibleFrom ? new Date() >= new Date(employee.eligibleFrom) : true;
 
   return (
@@ -238,6 +239,7 @@ export const AuthProvider = ({ children }) => {
         currentUser,
         employee,
         isAdmin,
+        isHr,
         isEligible,
         login,
         requestAccess,

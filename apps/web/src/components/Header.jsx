@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle.jsx';
 
 const Header = () => {
-  const { employee, isAdmin, logout, currentUser } = useAuth();
+  const { employee, isAdmin, isHr, logout, currentUser } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -19,6 +19,10 @@ const Header = () => {
 
   if (isAdmin) {
     navItems.push({ path: '/admin', label: 'Admin-Bereich' });
+  }
+
+  if (isHr) {
+    navItems.push({ path: '/hr', label: 'HR-Bereich' });
   }
 
   const isActive = (path) => location.pathname === path;

@@ -151,7 +151,7 @@ const LoginPage = () => {
   return (
     <>
       <Helmet>
-        <title>Anmelden - Tchibo Benefit-Bar</title>
+        <title>Anmelden - Tchibo BenefitBar</title>
       </Helmet>
 
       <Header />
@@ -171,10 +171,7 @@ const LoginPage = () => {
         <div className="relative z-10 mx-auto flex min-h-[calc(100vh-8rem)] max-w-md items-center justify-center lg:min-h-[calc(100vh-9rem)]">
           <section className="w-full rounded-lg border border-[#E7DDBF] bg-white/95 p-6 shadow-2xl shadow-black/10 backdrop-blur-sm transition-colors duration-300 dark:border-[#3A3E46] dark:bg-[#202329]/95 dark:shadow-black/40 sm:p-8">
             <div className="mb-7 text-center">
-              <h1 className="text-3xl font-bold text-[#222222] dark:text-[#F7F2E8]">Tchibo Benefitbar</h1>
-              <p className="mx-auto mt-2 text-sm text-[#5E5A52] dark:text-[#C8C0B1]">
-                Bitte melde dich mit deiner E-Mail-Adresse an.
-              </p>
+              <h1 className="text-3xl font-bold text-[#C0A468] dark:text-[#D4B978]">BenefitBar</h1>
             </div>
 
             <ErrorAlert message={errorMsg} onDismiss={() => setErrorMsg(null)} />

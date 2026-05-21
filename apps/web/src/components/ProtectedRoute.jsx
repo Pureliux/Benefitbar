@@ -4,8 +4,8 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { isAllowedLoginEmail } from '@/lib/emailAccess';
 
-const ProtectedRoute = ({ children, adminOnly = false }) => {
-  const { currentUser, employee, isAdmin, initialLoading } = useAuth();
+const ProtectedRoute = ({ children, adminOnly = false, hrOnly = false }) => {
+  const { currentUser, employee, isAdmin, isHr, initialLoading } = useAuth();
 
   if (initialLoading) {
     return (
@@ -28,6 +28,10 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   }
 
   if (adminOnly && !isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (hrOnly && !isHr) {
     return <Navigate to="/dashboard" replace />;
   }
 

@@ -9,7 +9,7 @@ const AccessDeniedPage = () => {
   return (
     <>
       <Helmet>
-        <title>Kein Zugriff - Tchibo Benefit-Bar</title>
+        <title>Kein Zugriff - Tchibo BenefitBar</title>
         <meta name="description" content="Zugriff verweigert" />
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>

@@ -104,8 +104,13 @@ const BenefitSelectionPage = () => {
   };
 
   const handleSelectBenefit = async (benefit) => {
-    if (overview?.submission?.status !== 'draft' && overview?.submission?.status !== 'needs_info') {
+    if (!['draft', 'needs_info', 'rejected'].includes(overview?.submission?.status)) {
       toast.error('Diese Einreichung kann aktuell nicht bearbeitet werden.');
+      return;
+    }
+
+    if ((overview?.window?.canEdit ?? true) === false) {
+      toast.error(overview?.window?.notice || 'Die Auswahl ist aktuell nicht geöffnet.');
       return;
     }
 
@@ -274,9 +279,10 @@ const BenefitSelectionPage = () => {
 
   const benefitYear = overview?.benefitYear;
   const submission = overview?.submission || {};
+  const windowInfo = overview?.window || {};
   const benefits = overview?.benefits || [];
   const selectedBenefits = overview?.selectedBenefits || [];
-  const editable = submission.status === 'draft' || submission.status === 'needs_info';
+  const editable = (submission.status === 'draft' || submission.status === 'needs_info' || submission.status === 'rejected') && (windowInfo.canEdit ?? true);
   const annualBudget = benefitYear?.annualBudget || 1000;
   const remainingBudget = submission.remainingBudget ?? annualBudget;
   const budgetExceeded = isBudgetExceeded();
@@ -286,7 +292,7 @@ const BenefitSelectionPage = () => {
   return (
     <>
       <Helmet>
-        <title>Benefits auswählen - Tchibo Benefit-Bar</title>
+        <title>Benefits auswählen - Tchibo BenefitBar</title>
         <meta name="description" content="Benefits auswählen" />
       </Helmet>
 
@@ -301,9 +307,19 @@ const BenefitSelectionPage = () => {
               <p className="mt-2 text-sm text-muted-foreground">Wähle aus den Angeboten oder reiche einen eigenen Benefit zur Prüfung ein.</p>
             </div>
             <Button onClick={() => navigate('/submission')} className="bg-[#C0A468] text-white hover:bg-[#A98D52]">
-              Zur Einreichung prüfen
+              Nachweise & Status
             </Button>
           </div>
+
+          {windowInfo.notice && (
+            <div className={`mb-8 rounded-lg border p-4 text-sm font-medium ${
+              windowInfo.isUrgent
+                ? 'border-[#EA5153]/30 bg-[#EA5153]/10 text-[#EA5153]'
+                : 'border-[#C0A468]/30 bg-[#C0A468]/10 text-[#8B7138]'
+            }`}>
+              {windowInfo.notice}
+            </div>
+          )}
 
           <section className="mb-8 grid gap-4 md:grid-cols-4">
             <div className="rounded-lg border border-border bg-card p-5 shadow-sm">

@@ -16,9 +16,28 @@ const statusSteps = [
   { key: 'approved', label: 'Genehmigt' },
 ];
 
+const stepVisuals = {
+  done: {
+    circle: 'bg-[#719C6F] text-white',
+    text: 'text-[#315B30] dark:text-[#A9D0A6]',
+  },
+  active: {
+    circle: 'bg-[#EDC948] text-[#3B2F0D]',
+    text: 'text-[#8B7138] dark:text-[#EDD38E]',
+  },
+  pending: {
+    circle: 'bg-muted text-muted-foreground',
+    text: 'text-muted-foreground',
+  },
+  error: {
+    circle: 'bg-[#EA5153] text-white',
+    text: 'text-[#EA5153]',
+  },
+};
+
 function statusInfo(status) {
   const map = {
-    draft: { label: 'Entwurf', tone: 'bg-muted text-muted-foreground', text: 'Du kannst deine Auswahl noch bearbeiten.' },
+    draft: { label: 'Entwurf', tone: 'bg-[#EDC948]/20 text-[#8B7138]', text: 'Deine Auswahl ist in Bearbeitung und wurde noch nicht final eingereicht.' },
     submitted: { label: 'In Prüfung', tone: 'bg-[#C0A468]/15 text-[#8B7138]', text: 'Deine Einreichung liegt bei HR/Prozessmanagement.' },
     needs_info: { label: 'Unterlagen fehlen', tone: 'bg-[#EA5153]/15 text-[#EA5153]', text: 'Bitte lade die angeforderten Unterlagen nach.' },
     approved: { label: 'Genehmigt', tone: 'bg-[#719C6F]/15 text-[#719C6F]', text: 'Deine Einreichung wurde genehmigt.' },
@@ -26,6 +45,32 @@ function statusInfo(status) {
     auto_assigned: { label: 'Automatisch zugewiesen', tone: 'bg-muted text-muted-foreground', text: 'Es wurde eine automatische Auswahl erstellt.' },
   };
   return map[status] || map.draft;
+}
+
+function statusStepState(status, stepKey) {
+  const stateByStatus = {
+    draft: { draft: 'active', submitted: 'pending', approved: 'pending' },
+    submitted: { draft: 'done', submitted: 'active', approved: 'pending' },
+    needs_info: { draft: 'done', submitted: 'active', approved: 'pending' },
+    approved: { draft: 'done', submitted: 'done', approved: 'done' },
+    rejected: { draft: 'done', submitted: 'error', approved: 'pending' },
+    auto_assigned: { draft: 'active', submitted: 'pending', approved: 'pending' },
+  };
+
+  return stateByStatus[status]?.[stepKey] || stateByStatus.draft[stepKey];
+}
+
+function StepIcon({ state, index }) {
+  if (state === 'done') {
+    return <CheckCircle2 className="h-5 w-5" />;
+  }
+  if (state === 'error') {
+    return <AlertCircle className="h-5 w-5" />;
+  }
+  if (state === 'active') {
+    return <Clock3 className="h-5 w-5" />;
+  }
+  return index + 1;
 }
 
 const SubmissionPage = () => {
@@ -137,10 +182,15 @@ const SubmissionPage = () => {
   };
 
   const submission = overview?.submission;
+  const windowInfo = overview?.window || {};
   const selectedBenefits = overview?.selectedBenefits || [];
   const attachments = overview?.attachments || [];
   const status = statusInfo(submission?.status);
-  const isLocked = submission && !['draft', 'needs_info'].includes(submission.status);
+  const statusEditable = submission && ['draft', 'needs_info', 'rejected'].includes(submission.status);
+  const canEdit = Boolean(statusEditable && (windowInfo.canEdit ?? true));
+  const canSubmit = Boolean(canEdit && (windowInfo.canSubmit ?? true));
+  const isLocked = !canEdit;
+  const rejectionReason = submission?.adminComment || submission?.needsInfoReason;
 
   const attachmentsBySelectedId = useMemo(() => {
     const map = new Map();
@@ -167,7 +217,7 @@ const SubmissionPage = () => {
   return (
     <>
       <Helmet>
-        <title>Status - Tchibo Benefit-Bar</title>
+        <title>Status - Tchibo BenefitBar</title>
         <meta name="description" content="Status deiner Benefit-Bar Einreichung" />
       </Helmet>
 
@@ -184,20 +234,28 @@ const SubmissionPage = () => {
             <span className={`inline-flex w-fit rounded-full px-3 py-1 text-sm font-semibold ${status.tone}`}>{status.label}</span>
           </div>
 
+          {windowInfo.notice && (
+            <div className={`mb-8 rounded-lg border p-4 text-sm font-medium ${
+              windowInfo.isUrgent
+                ? 'border-[#EA5153]/30 bg-[#EA5153]/10 text-[#EA5153]'
+                : 'border-[#C0A468]/30 bg-[#C0A468]/10 text-[#8B7138]'
+            }`}>
+              {windowInfo.notice}
+            </div>
+          )}
+
           <section className="mb-8 rounded-lg border border-border bg-card p-6 shadow-sm">
             <div className="grid gap-4 md:grid-cols-3">
               {statusSteps.map((step, index) => {
-                const reached = step.key === 'draft'
-                  || submission?.status === step.key
-                  || (step.key === 'submitted' && ['submitted', 'approved', 'needs_info'].includes(submission?.status))
-                  || (step.key === 'approved' && submission?.status === 'approved');
+                const stepState = statusStepState(submission?.status, step.key);
+                const visual = stepVisuals[stepState];
                 return (
                   <div key={step.key} className="flex items-center gap-3">
-                    <div className={`flex h-9 w-9 items-center justify-center rounded-full ${reached ? 'bg-[#719C6F] text-white' : 'bg-muted text-muted-foreground'}`}>
-                      {reached ? <CheckCircle2 className="h-5 w-5" /> : index + 1}
+                    <div className={`flex h-9 w-9 items-center justify-center rounded-full ${visual.circle}`}>
+                      <StepIcon state={stepState} index={index} />
                     </div>
                     <div>
-                      <p className="font-semibold">{step.label}</p>
+                      <p className={`font-semibold ${visual.text}`}>{step.label}</p>
                       <p className="text-xs text-muted-foreground">{index === 0 ? 'Auswahl bearbeiten' : index === 1 ? 'HR prüft' : 'Abgeschlossen'}</p>
                     </div>
                   </div>
@@ -206,6 +264,15 @@ const SubmissionPage = () => {
             </div>
             <p className="mt-5 rounded-lg bg-muted/40 p-4 text-sm text-muted-foreground">{status.text}</p>
           </section>
+
+          {submission?.status === 'rejected' && (
+            <div className="mb-8 flex items-start gap-3 rounded-lg border border-[#EA5153]/30 bg-[#EA5153]/10 p-4 text-[#EA5153]">
+              <AlertCircle className="mt-0.5 h-5 w-5" />
+              <p className="text-sm font-medium">
+                Abgelehnt: {rejectionReason || 'Keine Begründung hinterlegt.'} Bitte bearbeiten und erneut einreichen.
+              </p>
+            </div>
+          )}
 
           <section className="mb-8 grid gap-4 md:grid-cols-4">
             <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
@@ -330,7 +397,7 @@ const SubmissionPage = () => {
             )}
           </section>
 
-          {!isLocked && selectedBenefits.length > 0 && (
+          {canEdit && selectedBenefits.length > 0 && (
             <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
               {(submission?.employeeOwnContributionAmount || 0) > 0 && (
                 <div className="mb-6 flex items-start gap-3 rounded-lg bg-[#EA5153]/10 p-4">
@@ -345,7 +412,7 @@ const SubmissionPage = () => {
                 <Button variant="outline" onClick={handleSaveDraft}>Als Entwurf speichern</Button>
                 <Button
                   onClick={handleSubmit}
-                  disabled={submitting || ((submission?.employeeOwnContributionAmount || 0) > 0 && !confirmed)}
+                  disabled={!canSubmit || submitting || ((submission?.employeeOwnContributionAmount || 0) > 0 && !confirmed)}
                   className="bg-[#C0A468] text-white hover:bg-[#A98D52]"
                 >
                   <Send className="mr-2 h-4 w-4" />
@@ -355,7 +422,7 @@ const SubmissionPage = () => {
             </section>
           )}
 
-          {submission?.needsInfoReason && (
+          {submission?.status === 'needs_info' && submission?.needsInfoReason && (
             <div className="mt-8 flex items-start gap-3 rounded-lg border border-[#EA5153]/30 bg-[#EA5153]/10 p-4 text-[#EA5153]">
               <AlertCircle className="mt-0.5 h-5 w-5" />
               <p className="text-sm font-medium">{submission.needsInfoReason}</p>

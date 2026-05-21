@@ -32,13 +32,16 @@ const AdminDashboard = () => {
     password: '',
     confirmPassword: '',
     status: 'active',
-    isAdmin: false
+    isAdmin: false,
+    isHr: false
   });
   const [isCreating, setIsCreating] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [roleDraft, setRoleDraft] = useState({ isAdmin: false, isHr: false });
   const [editPassword, setEditPassword] = useState('');
   const [editPasswordConfirm, setEditPasswordConfirm] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isUpdatingRoles, setIsUpdatingRoles] = useState(false);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
 
   useEffect(() => {
@@ -67,6 +70,7 @@ const AdminDashboard = () => {
 
   const closeEmployeeDialog = () => {
     setSelectedEmployee(null);
+    setRoleDraft({ isAdmin: false, isHr: false });
     setEditPassword('');
     setEditPasswordConfirm('');
   };
@@ -114,10 +118,40 @@ const AdminDashboard = () => {
       setErrorMsg(result.error);
     } else {
       setSuccessMsg('User wurde erstellt und kann sich jetzt einloggen.');
-      setNewUser({ email: '', firstName: '', lastName: '', password: '', confirmPassword: '', status: 'active', isAdmin: false });
+      setNewUser({ email: '', firstName: '', lastName: '', password: '', confirmPassword: '', status: 'active', isAdmin: false, isHr: false });
       fetchAllData();
     }
     setIsCreating(false);
+  };
+
+  const handleUpdateRoles = async () => {
+    clearMessages();
+    if (!selectedEmployee) return;
+
+    setIsUpdatingRoles(true);
+    try {
+      const res = await apiServerClient.fetch('/admin/update-user-roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedEmployee.id,
+          isAdmin: roleDraft.isAdmin,
+          isHr: roleDraft.isHr,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || data.message || 'Rollen konnten nicht gespeichert werden.');
+      }
+      setSuccessMsg(data.message || 'Rollen wurden gespeichert.');
+      const updatedUser = data.user || { ...selectedEmployee, ...roleDraft };
+      setSelectedEmployee(updatedUser);
+      await fetchAllData();
+    } catch (err) {
+      setErrorMsg(err.message || 'Rollen konnten nicht gespeichert werden.');
+    } finally {
+      setIsUpdatingRoles(false);
+    }
   };
 
   const handleUpdatePassword = async () => {
@@ -203,7 +237,7 @@ const AdminDashboard = () => {
   return (
     <>
       <Helmet>
-        <title>Admin-Bereich - Tchibo Benefit-Bar</title>
+        <title>Admin-Bereich - Tchibo BenefitBar</title>
       </Helmet>
 
       <Header />
@@ -269,6 +303,7 @@ const AdminDashboard = () => {
                             onClick={() => {
                               clearMessages();
                               setSelectedEmployee(emp);
+                              setRoleDraft({ isAdmin: Boolean(emp.isAdmin), isHr: Boolean(emp.isHr) });
                               setEditPassword('');
                               setEditPasswordConfirm('');
                             }}
@@ -278,6 +313,7 @@ const AdminDashboard = () => {
                               <div className="font-medium text-foreground flex items-center gap-2">
                                 {emp.firstName} {emp.lastName} 
                                 {emp.isAdmin && <ShieldAlert className="h-3 w-3 text-primary" aria-label="Admin" />}
+                                {emp.isHr && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-blue-700">HR</span>}
                               </div>
                               <div className="text-muted-foreground mt-1">{emp.email}</div>
                             </td>
@@ -302,6 +338,7 @@ const AdminDashboard = () => {
                               <div><span className="font-medium text-foreground">Methode:</span> {emp.loginMethod || '-'}</div>
                               <div><span className="font-medium text-foreground">Letzter Login:</span> {emp.lastLoginAt ? format(new Date(emp.lastLoginAt), 'dd.MM.yyyy HH:mm') : 'nie'}</div>
                               <div><span className="font-medium text-foreground">Admin:</span> {emp.isAdmin ? 'Ja' : 'Nein'}</div>
+                              <div><span className="font-medium text-foreground">HR:</span> {emp.isHr ? 'Ja' : 'Nein'}</div>
                             </td>
                             <td className="py-4 px-4">
                               <Button type="button" variant="outline" size="sm" className="text-foreground">
@@ -390,6 +427,14 @@ const AdminDashboard = () => {
                       />
                       <label htmlFor="isAdmin" className="text-sm font-medium cursor-pointer text-foreground">Admin-Rechte vergeben</label>
                     </div>
+                    <div className="flex items-center gap-2 bg-blue-50 p-3 rounded-lg border border-blue-100 dark:bg-blue-950/25 dark:border-blue-900/40">
+                      <Checkbox
+                        id="isHr"
+                        checked={newUser.isHr}
+                        onCheckedChange={(checked) => setNewUser({...newUser, isHr: checked})}
+                      />
+                      <label htmlFor="isHr" className="text-sm font-medium cursor-pointer text-foreground">HR-Rolle vergeben</label>
+                    </div>
                     <Button 
                       type="submit" 
                       disabled={isCreating} 
@@ -423,7 +468,31 @@ const AdminDashboard = () => {
                   <div>Auth: {selectedEmployee.authStatus || '-'}</div>
                   <div>Passwort gesetzt: {selectedEmployee.passwordSet ? 'Ja' : 'Nein'}</div>
                   <div>Admin: {selectedEmployee.isAdmin ? 'Ja' : 'Nein'}</div>
+                  <div>HR: {selectedEmployee.isHr ? 'Ja' : 'Nein'}</div>
                 </div>
+              </div>
+
+              <div className="space-y-3 rounded-lg border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/40 dark:bg-blue-950/20">
+                <div className="font-semibold text-foreground">Rollen</div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="flex items-center gap-2 rounded-md border border-border bg-background p-3 text-sm font-medium">
+                    <Checkbox
+                      checked={roleDraft.isAdmin}
+                      onCheckedChange={(checked) => setRoleDraft((current) => ({ ...current, isAdmin: Boolean(checked) }))}
+                    />
+                    Admin-Bereich
+                  </label>
+                  <label className="flex items-center gap-2 rounded-md border border-border bg-background p-3 text-sm font-medium">
+                    <Checkbox
+                      checked={roleDraft.isHr}
+                      onCheckedChange={(checked) => setRoleDraft((current) => ({ ...current, isHr: Boolean(checked) }))}
+                    />
+                    HR-Bereich
+                  </label>
+                </div>
+                <Button onClick={handleUpdateRoles} disabled={isUpdatingRoles} className="bg-blue-700 text-white hover:bg-blue-800">
+                  {isUpdatingRoles ? 'Rollen werden gespeichert …' : 'Rollen speichern'}
+                </Button>
               </div>
 
               <div className="space-y-3">

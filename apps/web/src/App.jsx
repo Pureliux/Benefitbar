@@ -16,6 +16,7 @@ import SubmissionPage from '@/pages/SubmissionPage.jsx';
 import HelpPage from '@/pages/HelpPage.jsx';
 import AdminDashboard from '@/pages/AdminDashboard.jsx';
 import AdminSystemCheck from '@/pages/AdminSystemCheck.jsx';
+import HrDashboard from '@/pages/HrDashboard.jsx';
 
 // Note: Ensure HomePage is defined if you have it. Redirecting / to /dashboard for now as per previous structure.
 function AppContent() {
@@ -77,6 +78,14 @@ function AppContent() {
           element={
             <ProtectedRoute adminOnly>
               <AdminSystemCheck />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hr"
+          element={
+            <ProtectedRoute hrOnly>
+              <HrDashboard />
             </ProtectedRoute>
           }
         />

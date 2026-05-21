@@ -173,7 +173,7 @@ const AdminSystemCheck = () => {
   return (
     <>
       <Helmet>
-        <title>System-Check - Tchibo Benefit-Bar</title>
+        <title>System-Check - Tchibo BenefitBar</title>
       </Helmet>
 
       <Header />

@@ -68,6 +68,7 @@ const DashboardPage = () => {
 
   const submission = overview?.submission;
   const benefitYear = overview?.benefitYear;
+  const windowInfo = overview?.window || {};
   const selectedBenefits = overview?.selectedBenefits || [];
   const totalBudget = benefitYear?.annualBudget || 1000;
   const selectedAmount = submission?.totalSelectedAmount || 0;
@@ -95,7 +96,7 @@ const DashboardPage = () => {
   return (
     <>
       <Helmet>
-        <title>Übersicht - Tchibo Benefit-Bar</title>
+        <title>Übersicht - Tchibo BenefitBar</title>
         <meta name="description" content="Deine Benefit-Bar Übersicht" />
       </Helmet>
 
@@ -121,6 +122,16 @@ const DashboardPage = () => {
             <div className="mb-8 flex items-start gap-3 rounded-lg border border-[#EA5153]/30 bg-[#EA5153]/10 p-4 text-[#EA5153]">
               <AlertCircle className="mt-0.5 h-5 w-5" />
               <p className="text-sm font-medium">{errorMsg}</p>
+            </div>
+          )}
+
+          {windowInfo.notice && (
+            <div className={`mb-8 rounded-lg border p-4 text-sm font-medium ${
+              windowInfo.isUrgent
+                ? 'border-[#EA5153]/30 bg-[#EA5153]/10 text-[#EA5153]'
+                : 'border-[#C0A468]/30 bg-[#C0A468]/10 text-[#8B7138]'
+            }`}>
+              {windowInfo.notice}
             </div>
           )}
 
