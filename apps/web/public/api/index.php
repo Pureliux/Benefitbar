@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v32';
+const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v33';
 const LOGIN_EMAIL_ERROR_MESSAGE = 'Bitte verwende deine @eduscho.at-Adresse oder eine freigegebene E-Mail-Adresse.';
 const FIRST_BENEFIT_YEAR = 2027;
 const FIRST_SELECTION_OPEN_DATE = '2026-05-21';
@@ -308,6 +308,7 @@ function migrate(): void
     ensure_column($pdo, 'bb_attachments', 'file_blob', 'LONGBLOB NULL AFTER file_type');
     ensure_column($pdo, 'bb_attachments', 'file_size', 'INT UNSIGNED NULL AFTER file_blob');
     backfill_attachment_blobs($pdo);
+    apply_account_display_name_fixes($pdo);
 
     seed_benefit_data($pdo);
     ensure_base_benefit_calendar($pdo);
@@ -712,6 +713,20 @@ function log_email(string $recipient, string $subject, string $type, string $sta
     } catch (Throwable $error) {
         error_log('email log failed: ' . $error->getMessage());
     }
+}
+
+function apply_account_display_name_fixes(PDO $pdo): void
+{
+    $stmt = $pdo->prepare("
+        UPDATE bb_users
+        SET first_name = ?, last_name = ?, updated_at = ?
+        WHERE email = ?
+          AND (
+            first_name IN ('', 'Admin')
+            OR last_name IN ('', 'Benefitbar', 'Benefit-Bar')
+          )
+    ");
+    $stmt->execute(['Amir', 'Tirana', now_sql(), 'amir.tirana@eduscho.at']);
 }
 
 function bootstrap_admin(): void
