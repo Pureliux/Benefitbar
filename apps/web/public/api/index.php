@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v27';
+const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v28';
 const LOGIN_EMAIL_ERROR_MESSAGE = 'Bitte verwende deine @eduscho.at-Adresse oder eine freigegebene E-Mail-Adresse.';
 const FIRST_BENEFIT_YEAR = 2027;
 const FIRST_SELECTION_OPEN_DATE = '2026-05-21';
@@ -2680,10 +2680,6 @@ function handle_hr_submission_decision(): void
     if ($submissionId <= 0 || !in_array($decision, $allowed, true)) {
         json_response(['success' => false, 'error' => 'Entscheidung ist ungültig.', 'errorCode' => 'invalid_decision'], 400);
     }
-    if ($decision !== 'approved' && $reason === '') {
-        json_response(['success' => false, 'error' => 'Bitte eine Begründung angeben.', 'errorCode' => 'missing_reason'], 400);
-    }
-
     $submission = find_submission_by_id($submissionId);
     if (!$submission) {
         json_response(['success' => false, 'error' => 'Einreichung wurde nicht gefunden.', 'errorCode' => 'submission_not_found'], 404);
@@ -2701,8 +2697,9 @@ function handle_hr_submission_decision(): void
         }
     }
 
-    $adminComment = $decision === 'rejected' ? $reason : ($decision === 'needs_info' ? $reason : null);
-    $needsInfoReason = $decision === 'needs_info' ? $reason : ($decision === 'rejected' ? $reason : null);
+    $optionalReason = $reason !== '' ? $reason : null;
+    $adminComment = $decision === 'rejected' ? $optionalReason : ($decision === 'needs_info' ? $optionalReason : null);
+    $needsInfoReason = $decision === 'needs_info' ? $optionalReason : ($decision === 'rejected' ? $optionalReason : null);
     db()->prepare("
         UPDATE bb_submissions
         SET status = ?, admin_comment = ?, needs_info_reason = ?,

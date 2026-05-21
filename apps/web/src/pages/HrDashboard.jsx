@@ -245,11 +245,6 @@ const HrDashboard = () => {
   };
 
   const decideSubmission = async (decision) => {
-    if (decision !== 'approved' && !decisionReason.trim()) {
-      toast.error('Bitte eine Begründung angeben.');
-      return;
-    }
-
     setSavingAction(`decision-${decision}`);
     try {
       const res = await apiServerClient.fetch('/hr/submissions/decision', {
@@ -258,7 +253,7 @@ const HrDashboard = () => {
         body: JSON.stringify({
           submissionId: detail.id,
           decision,
-          reason: decisionReason,
+          reason: decisionReason.trim(),
         }),
       });
       const data = await res.json();
@@ -278,7 +273,7 @@ const HrDashboard = () => {
         },
         rejected: {
           title: 'Einreichung abgelehnt',
-          text: `${employeeName(detail?.employee)} sieht jetzt die Ablehnung mit Begründung.`,
+          text: `${employeeName(detail?.employee)} sieht jetzt die Ablehnung im Statusbereich.`,
           className: 'border-red-200 bg-red-50 text-red-800',
         },
       };
@@ -542,7 +537,7 @@ const HrDashboard = () => {
                     <Textarea
                       value={decisionReason}
                       onChange={(event) => setDecisionReason(event.target.value)}
-                      placeholder="Begründung für Rückfrage oder Ablehnung"
+                      placeholder="Optionaler Hinweis für Rückfrage oder Ablehnung"
                       className="mb-3 bg-white dark:bg-slate-900"
                     />
                     <div className="flex flex-col gap-2 sm:flex-row">

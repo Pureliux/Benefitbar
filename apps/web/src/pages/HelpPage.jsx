@@ -76,10 +76,10 @@ const HelpPage = () => {
               <p className="mt-6 rounded-lg border border-[#D8C894]/70 bg-[#F7F2E8] p-4 text-sm text-[#5E5A52] dark:border-border dark:bg-[#20242A] dark:text-[#D8DCE3]">
                 Bei weiteren Fragen wenden Sie sich bitte an{' '}
                 <a
-                  href="mailto:prozessmanagement@eduscho.at"
+                  href="mailto:benefitbar@eduscho.at"
                   className="font-semibold text-[#8B7138] underline-offset-4 hover:underline dark:text-[#EDD38E]"
                 >
-                  prozessmanagement@eduscho.at
+                  benefitbar@eduscho.at
                 </a>.
               </p>
             </section>

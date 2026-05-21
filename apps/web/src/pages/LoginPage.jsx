@@ -157,7 +157,6 @@ const LoginPage = () => {
       <Header />
 
       <main className="benefit-ambient-bg login-chalk-bg relative min-h-[calc(100vh-4rem)] overflow-hidden px-4 py-8 text-[#222222] transition-colors duration-300 dark:text-[#F7F2E8] sm:py-10">
-        <div className="login-chalk-layer pointer-events-none absolute inset-0 z-0" />
         <div className="pointer-events-none absolute inset-x-0 top-7 hidden justify-between px-8 md:flex lg:hidden">
           {tabletCards.map((card) => (
             <BenefitImageCard key={`tablet-${card.label}`} card={card} compact />
@@ -171,11 +170,11 @@ const LoginPage = () => {
         <div className="relative z-10 mx-auto flex min-h-[calc(100vh-8rem)] max-w-md items-center justify-center lg:min-h-[calc(100vh-9rem)]">
           <section className="w-full rounded-lg border border-[#E7DDBF] bg-white/95 p-6 shadow-2xl shadow-black/10 backdrop-blur-sm transition-colors duration-300 dark:border-[#3A3E46] dark:bg-[#202329]/95 dark:shadow-black/40 sm:p-8">
             <div className="mb-8 text-center">
-              <div className="mx-auto flex max-w-[23rem] justify-center rounded-md bg-white/95 px-2 py-2 dark:bg-white">
+              <div className="mx-auto flex max-w-[22rem] justify-center rounded-md bg-white/95 px-3 py-2 dark:bg-white">
                 <img
-                  src="/brand/benefitbar-logo.png"
-                  alt="Tchibo Benefitbar"
-                  className="h-auto max-h-20 w-full object-contain"
+                  src="/brand/benefitbar-login-logo.png"
+                  alt="Benefitbar"
+                  className="h-auto max-h-24 w-full object-contain"
                 />
               </div>
             </div>
