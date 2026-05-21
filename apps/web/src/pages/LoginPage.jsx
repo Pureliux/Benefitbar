@@ -11,7 +11,6 @@ import ErrorAlert from '@/components/ErrorAlert.jsx';
 import { validateAllowedLoginEmail } from '@/lib/emailAccess';
 
 const accessSuccessMessage = 'Falls für diese E-Mail-Adresse ein aktiver Zugang besteht, wurde eine E-Mail mit weiteren Schritten versendet.';
-const interWordmarkStylesheet = 'https://fonts.googleapis.com/css2?family=Inter:wght@900&display=swap';
 
 const benefitCards = [
   {
@@ -153,9 +152,6 @@ const LoginPage = () => {
     <>
       <Helmet>
         <title>Anmelden - Tchibo Benefitbar</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="stylesheet" href={interWordmarkStylesheet} />
       </Helmet>
 
       <Header />
@@ -175,17 +171,13 @@ const LoginPage = () => {
         <div className="relative z-10 mx-auto flex min-h-[calc(100vh-8rem)] max-w-md items-center justify-center lg:min-h-[calc(100vh-9rem)]">
           <section className="w-full rounded-lg border border-[#E7DDBF] bg-white/95 p-6 shadow-2xl shadow-black/10 backdrop-blur-sm transition-colors duration-300 dark:border-[#3A3E46] dark:bg-[#202329]/95 dark:shadow-black/40 sm:p-8">
             <div className="mb-8 text-center">
-              <h1
-                className="inline-block px-1 text-4xl font-extrabold leading-none tracking-normal text-[#C0A468] dark:text-[#D4B978] sm:text-5xl"
-                style={{
-                  fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif",
-                  fontWeight: 900,
-                  transform: 'scaleX(1.04)',
-                  transformOrigin: 'center',
-                }}
-              >
-                Benefitbar
-              </h1>
+              <div className="mx-auto flex max-w-[23rem] justify-center rounded-md bg-white/95 px-2 py-2 dark:bg-white">
+                <img
+                  src="/brand/benefitbar-logo.png"
+                  alt="Tchibo Benefitbar"
+                  className="h-auto max-h-20 w-full object-contain"
+                />
+              </div>
             </div>
 
             <ErrorAlert message={errorMsg} onDismiss={() => setErrorMsg(null)} />
