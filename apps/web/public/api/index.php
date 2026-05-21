@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
-const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v33';
+const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v34';
 const LOGIN_EMAIL_ERROR_MESSAGE = 'Bitte verwende deine @eduscho.at-Adresse oder eine freigegebene E-Mail-Adresse.';
 const FIRST_BENEFIT_YEAR = 2027;
 const FIRST_SELECTION_OPEN_DATE = '2026-05-21';
@@ -1787,6 +1787,7 @@ function reset_email(array $user, string $token): array
                 <a href=\"{$linkHtml}\" style=\"color:#8B7138;text-decoration:underline;font-weight:bold;\">{$linkHtml}</a>
             </p>
             <p>Der Link ist 24 Stunden gültig.</p>
+            <p>Mit freundlichen Grüßen<br>dein Benefitbar-Team</p>
         </div>
     ";
     return send_email($user['email'], 'Tchibo Benefitbar - Passwort zurücksetzen', $html, 'password_reset_email', (int)$user['id']);
