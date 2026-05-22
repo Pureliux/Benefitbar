@@ -8,6 +8,7 @@ const BENEFITBAR_API_VERSION = '2026-05-21-hr-yearly-review-v34';
 const LOGIN_EMAIL_ERROR_MESSAGE = 'Bitte verwende deine @eduscho.at-Adresse oder eine freigegebene E-Mail-Adresse.';
 const FIRST_BENEFIT_YEAR = 2027;
 const FIRST_SELECTION_OPEN_DATE = '2026-05-21';
+const SUBMISSION_NOTIFICATION_EMAIL = 'benefitbar@eduscho.at';
 
 header('X-Content-Type-Options: nosniff');
 
@@ -2547,7 +2548,7 @@ function send_submission_notifications(array $user, array $year, array $submissi
         . '<strong>Eigenanteil:</strong> ' . number_format((float)$submission['employee_own_contribution_amount'], 2, ',', '.') . ' EUR</p>'
         . $attachmentList;
 
-    $hrResult = send_email(config_value('HR_NOTIFICATION_EMAIL', 'benefitbar@eduscho.at'), $notificationSubject, $html, 'submission_notification', (int)$user['id'], $attachments);
+    $hrResult = send_email(SUBMISSION_NOTIFICATION_EMAIL, $notificationSubject, $html, 'submission_notification', (int)$user['id'], $attachments);
     if (!$hrResult['success']) {
         return $hrResult;
     }
