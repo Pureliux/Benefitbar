@@ -2529,21 +2529,39 @@ function send_submission_notifications(array $user, array $year, array $submissi
     $attachmentList = $attachments
         ? '<p><strong>Anhänge:</strong> ' . count($attachments) . ' Datei(en) wurden dieser E-Mail beigefügt.</p>'
         : '<p><strong>Anhänge:</strong> Keine Nachweise beigefügt.</p>';
+    $benefitYear = (int)$year['year'];
+    $firstName = trim((string)($user['first_name'] ?? ''));
+    $lastName = trim((string)($user['last_name'] ?? ''));
+    $fullName = trim($firstName . ' ' . $lastName);
+    $userLabel = $fullName !== '' ? $fullName : (string)$user['email'];
+    $escapedUserLabel = htmlspecialchars($userLabel, ENT_QUOTES, 'UTF-8');
+    $notificationSubject = sanitize_email_header('Benefitbar Einreichung - ' . $userLabel . ' - ' . $benefitYear);
 
     $html = '<p>Eine Benefitbar Einreichung wurde final eingereicht.</p>'
-        . '<p><strong>User:</strong> ' . htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8') . '</p>'
-        . '<p><strong>Benefit-Jahr:</strong> ' . (int)$year['year'] . '</p>'
+        . '<p><strong>Name:</strong> ' . $escapedUserLabel . '<br>'
+        . '<strong>E-Mail:</strong> ' . htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8') . '</p>'
+        . '<p><strong>Benefit-Jahr:</strong> ' . $benefitYear . '</p>'
         . '<ul>' . $rows . '</ul>'
         . '<p><strong>Gesamt:</strong> ' . number_format((float)$submission['total_selected_amount'], 2, ',', '.') . ' EUR<br>'
         . '<strong>Unternehmensanteil:</strong> ' . number_format((float)$submission['covered_by_company_amount'], 2, ',', '.') . ' EUR<br>'
         . '<strong>Eigenanteil:</strong> ' . number_format((float)$submission['employee_own_contribution_amount'], 2, ',', '.') . ' EUR</p>'
         . $attachmentList;
 
-    $hrResult = send_email(config_value('HR_NOTIFICATION_EMAIL', 'prozessmanagement@eduscho.at'), 'Benefitbar Einreichung', $html, 'submission_notification', (int)$user['id'], $attachments);
+    $hrResult = send_email(config_value('HR_NOTIFICATION_EMAIL', 'benefitbar@eduscho.at'), $notificationSubject, $html, 'submission_notification', (int)$user['id'], $attachments);
     if (!$hrResult['success']) {
         return $hrResult;
     }
-    $userResult = send_email($user['email'], 'Tchibo Benefitbar - Einreichung erhalten', '<p>Deine Einreichung wurde erfolgreich übermittelt und wird geprüft.</p>', 'user_confirmation', (int)$user['id']);
+
+    $greetingName = htmlspecialchars($firstName !== '' ? $firstName : $userLabel, ENT_QUOTES, 'UTF-8');
+    $confirmationHtml = "
+        <div style=\"font-family:Arial,sans-serif;color:#222222;line-height:1.6;max-width:620px;\">
+            <p>Hallo {$greetingName},</p>
+            <p>deine Einreichung für das Benefit-Jahr {$benefitYear} wurde erfolgreich übermittelt und wird nun geprüft.</p>
+            <p>Du musst aktuell nichts weiter tun. Falls Rückfragen entstehen, melden wir uns bei dir.</p>
+            <p>Mit freundlichen Grüßen<br>dein Benefitbar-Team</p>
+        </div>
+    ";
+    $userResult = send_email($user['email'], 'Tchibo Benefitbar - Einreichung erhalten', $confirmationHtml, 'user_confirmation', (int)$user['id']);
     return $userResult['success'] ? ['success' => true] : $userResult;
 }
 

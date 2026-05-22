@@ -126,7 +126,7 @@ function benefitbar_config(): array
         'ALLOW_PHP_MAIL' => getenv('ALLOW_PHP_MAIL') ?: 'false',
         'MAIL_TRANSPORT' => getenv('MAIL_TRANSPORT') ?: 'smtp',
         'PHP_MAIL_FROM' => getenv('PHP_MAIL_FROM') ?: '',
-        'HR_NOTIFICATION_EMAIL' => getenv('HR_NOTIFICATION_EMAIL') ?: 'prozessmanagement@eduscho.at',
+        'HR_NOTIFICATION_EMAIL' => getenv('HR_NOTIFICATION_EMAIL') ?: 'benefitbar@eduscho.at',
     ];
 
     $config = benefitbar_apply_database_url($config, getenv('DATABASE_URL') ?: getenv('MYSQL_URL') ?: '');

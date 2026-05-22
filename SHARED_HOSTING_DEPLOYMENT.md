@@ -69,6 +69,7 @@ return [
     'ALLOW_PHP_MAIL' => 'false',
     'MAIL_TRANSPORT' => 'smtp',
     'PHP_MAIL_FROM' => 'Tchibo Benefitbar <no-reply@tchibo-benefitbar.at>',
+    'HR_NOTIFICATION_EMAIL' => 'benefitbar@eduscho.at',
 ];
 ```
 
