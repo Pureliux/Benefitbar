@@ -21,9 +21,9 @@ async function refreshIfAppShellIsStale() {
 		}
 
 		const payload = await response.json();
-		const refreshedVersion = sessionStorage.getItem('benefitbar-refresh-version');
+		const refreshedVersion = sessionStorage.getItem('app-refresh-version');
 		if (payload?.version && payload.version !== APP_VERSION && refreshedVersion !== payload.version) {
-			sessionStorage.setItem('benefitbar-refresh-version', payload.version);
+			sessionStorage.setItem('app-refresh-version', payload.version);
 			window.location.reload();
 		}
 	} catch {
