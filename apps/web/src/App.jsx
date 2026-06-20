@@ -2,8 +2,13 @@ import React from 'react';
 
 function App() {
 	return (
-		<main className="ice-only-page">
-			<img className="ice-only-image" src="/ice-cream.svg" alt="Eis" />
+		<main className="error-page">
+			<section className="error-shell" role="alert" aria-labelledby="error-title">
+				<p className="error-code">Error 503</p>
+				<img className="error-image" src="/ice-cream.svg" alt="" />
+				<h1 id="error-title">Seite voruebergehend nicht verfuegbar</h1>
+				<p className="error-message">Ein unerwarteter Fehler ist aufgetreten.</p>
+			</section>
 		</main>
 	);
 }

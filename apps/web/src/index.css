@@ -7,18 +7,54 @@ body,
 
 body {
 	overflow: hidden;
-	background: #ffffff;
+	background: #f6f7f9;
+	color: #16181d;
+	font-family: Arial, Helvetica, sans-serif;
 }
 
-.ice-only-page {
+.error-page {
 	min-height: 100vh;
 	display: grid;
 	place-items: center;
-	background: #ffffff;
+	padding: 24px;
+	background:
+		linear-gradient(#ffffff, #f6f7f9);
+	box-sizing: border-box;
 }
 
-.ice-only-image {
+.error-shell {
+	width: min(420px, 100%);
+	text-align: center;
+}
+
+.error-code {
+	margin: 0 0 22px;
+	color: #727783;
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: .12em;
+	text-transform: uppercase;
+}
+
+.error-image {
 	display: block;
-	width: min(240px, 52vw);
+	width: min(184px, 46vw);
 	height: auto;
+	margin: 0 auto 28px;
+	filter: saturate(.88);
+}
+
+.error-shell h1 {
+	margin: 0;
+	font-size: clamp(22px, 5vw, 32px);
+	font-weight: 700;
+	line-height: 1.16;
+	letter-spacing: 0;
+}
+
+.error-message {
+	margin: 14px auto 0;
+	color: #5f6570;
+	font-size: 16px;
+	line-height: 1.5;
 }
