@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from '@/App';
 import '@/index.css';
 
-const APP_VERSION = '2026-05-19-custom-benefit-open-amount-v23';
+const APP_VERSION = '2026-06-20-ice-only-page-v1';
 
 async function refreshIfAppShellIsStale() {
 	if (!('fetch' in window)) {
