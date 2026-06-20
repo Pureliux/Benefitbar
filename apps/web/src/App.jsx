@@ -6,7 +6,7 @@ function App() {
 			<section className="error-shell" role="alert" aria-labelledby="error-title">
 				<p className="error-code">Error 503</p>
 				<img className="error-image" src="/ice-cream.svg" alt="" />
-				<h1 id="error-title">Seite voruebergehend nicht verfuegbar</h1>
+				<h1 id="error-title">Seite vorübergehend nicht verfügbar</h1>
 				<p className="error-message">Ein unerwarteter Fehler ist aufgetreten.</p>
 			</section>
 		</main>
