@@ -36,14 +36,6 @@ body {
 	text-transform: uppercase;
 }
 
-.error-image {
-	display: block;
-	width: min(184px, 46vw);
-	height: auto;
-	margin: 0 auto 28px;
-	filter: saturate(.88);
-}
-
 .error-shell h1 {
 	margin: 0;
 	font-size: clamp(22px, 5vw, 32px);
